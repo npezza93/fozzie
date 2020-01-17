@@ -7,29 +7,30 @@ use std::io::Write;
 
 pub mod cursor;
 pub mod settings;
+pub mod search;
 
 fn main() {
     let settings = settings::parse();
+    let mut search = search::Search::new();
+
     print_choices(&settings);
 
     let mut stdout = settings.stdout();
 
-    write!(stdout, "{}", settings.prompt).unwrap();
-    stdout.flush().unwrap();
+    search.render(&settings);
 
     let tty = termion::get_tty().expect("err");
     for c in tty.keys() {
         match c.unwrap() {
-            Key::Char('q') => break,
-            Key::Char(c) => write!(stdout, "{}", c).unwrap(),
+            Key::Char(c) => search.keypress(c, &settings),
             Key::Alt(c) => println!("^{}", c),
             Key::Ctrl(c) => println!("*{}", c),
-            Key::Esc => println!("ESC"),
-            Key::Left => println!("←"),
-            Key::Right => println!("→"),
+            Key::Esc => break,
+            Key::Left => search.left(&settings),
+            Key::Right => search.right(&settings),
             Key::Up => println!("↑"),
             Key::Down => println!("↓"),
-            Key::Backspace => println!("×"),
+            Key::Backspace => search.backspace(&settings),
             _ => {}
         }
         stdout.flush().unwrap();
