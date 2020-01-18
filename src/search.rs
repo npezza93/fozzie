@@ -1,59 +1,60 @@
 use crate::cursor;
-use crate::settings;
-use std::io::Write;
+use crate::writer;
 
 pub struct Search {
     query: Vec<char>,
     position: usize,
+    prompt: String,
 }
 
 impl Search {
-    pub fn new() -> Search {
+    pub fn new(prompt: String) -> Search {
         Search {
             query: vec![],
             position: 0,
+            prompt,
         }
     }
 
-    fn current_col(&self, settings: &settings::Settings) -> usize {
-        settings.prompt.chars().count() + self.position + 1
-    }
-
-    pub fn render(&self, settings: &settings::Settings) {
+    pub fn render(&self) {
         let query: String = self.query.iter().collect();
-        let mut stdout = settings.stdout();
+        let current_col = self.prompt.chars().count() + self.position + 1;
 
-        cursor::clear_line(&settings);
-        write!(stdout, "\r{}{}", settings.prompt, query).unwrap();
-        cursor::col(self.current_col(&settings), &settings);
-        stdout.flush().unwrap();
+        writer::print(format!(
+            "{}\r{}{}{}",
+            cursor::clear_line(),
+            self.prompt,
+            query,
+            cursor::col(current_col)
+        ));
     }
 
-    pub fn keypress(&mut self, character: char, settings: &settings::Settings) {
+    pub fn keypress(&mut self, character: char) {
         self.query.push(character);
         self.position += 1;
-        write!(settings.stdout(), "{}", character).unwrap();
+
+        writer::print(character.to_string());
     }
 
-    pub fn backspace(&mut self, settings: &settings::Settings) {
+    pub fn backspace(&mut self) {
         if self.position > 0 {
             self.position -= 1;
             self.query.remove(self.position);
-            self.render(&settings);
+            self.render();
         }
     }
 
-    pub fn left(&mut self, settings: &settings::Settings) {
+    pub fn left(&mut self) {
         if self.position > 0 {
             self.position -= 1;
-            cursor::left(1, &settings);
+            writer::print(cursor::left(1));
         }
     }
 
-    pub fn right(&mut self, settings: &settings::Settings) {
+    pub fn right(&mut self) {
         if self.query.len() != self.position {
             self.position += 1;
-            cursor::right(1, &settings);
+            writer::print(cursor::right(1));
         }
     }
 }

@@ -1,53 +1,42 @@
 #[macro_use]
 extern crate clap;
 
-use std::io::Write;
+use choices::Choices;
+use config::Config;
+use search::Search;
+use std::error::Error;
 use termion::event::Key;
 use termion::input::TermRead;
 
+pub mod choices;
+pub mod config;
 pub mod cursor;
 pub mod search;
-pub mod settings;
+pub mod writer;
 
-fn main() {
-    let settings = settings::parse();
-    let mut search = search::Search::new();
+fn main() -> Result<(), Box<dyn Error>> {
+    let config = Config::new();
+    let mut search = Search::new(config.prompt);
+    let choices = Choices::new(config.lines);
 
-    print_choices(&settings);
+    choices.render();
+    search.render();
 
-    let mut stdout = settings.stdout();
-
-    search.render(&settings);
-
-    let tty = termion::get_tty().expect("err");
+    let tty = termion::get_tty()?;
     for c in tty.keys() {
         match c.unwrap() {
-            Key::Char(c) => search.keypress(c, &settings),
+            Key::Char(c) => search.keypress(c),
             Key::Alt(c) => println!("^{}", c),
             Key::Ctrl(c) => println!("*{}", c),
             Key::Esc => break,
-            Key::Left => search.left(&settings),
-            Key::Right => search.right(&settings),
+            Key::Left => search.left(),
+            Key::Right => search.right(),
             Key::Up => println!("↑"),
             Key::Down => println!("↓"),
-            Key::Backspace => search.backspace(&settings),
+            Key::Backspace => search.backspace(),
             _ => {}
         }
-        stdout.flush().unwrap();
     }
-}
 
-fn print_choices(settings: &settings::Settings) {
-    let mut stdout = settings.stdout();
-
-    cursor::move_screen_up(settings.lines);
-    write!(stdout, "\n\r").unwrap();
-    settings.choices[0..settings.lines].iter().for_each(|line| {
-        write!(stdout, "{}\n\r", line).unwrap();
-    });
-
-    let printed_options_count = [settings.choices.len(), settings.lines];
-    if let Some(lines) = printed_options_count.iter().min() {
-        cursor::up(lines + 1);
-    };
+    Ok(())
 }
