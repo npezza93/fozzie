@@ -1,6 +1,6 @@
-use termion::clear;
 use crate::settings;
 use std::io::Write;
+use termion::clear;
 
 pub fn up(n: usize) {
     print!("\x1B[{}A", n);

@@ -1,6 +1,6 @@
-use clap::{Arg, App, ArgMatches, Error, ErrorKind};
+use clap::{App, Arg, ArgMatches, Error, ErrorKind};
+use std::io::{self, stdin, stdout, BufRead};
 use termion::raw::IntoRawMode;
-use std::io::{self, BufRead, stdout, stdin};
 
 pub struct Settings {
     pub lines: usize,
@@ -69,8 +69,9 @@ fn parse_lines(matches: &ArgMatches) -> usize {
     if lines < 1 {
         Error::with_description(
             "'lines' must be greater than or equal to 1",
-            ErrorKind::InvalidValue
-        ).exit();
+            ErrorKind::InvalidValue,
+        )
+        .exit();
     }
 
     lines
@@ -101,5 +102,12 @@ pub fn parse() -> Settings {
     let show_scores = matches.is_present("show-scores");
     let stdin = stdin();
 
-    Settings { lines, prompt, query, show_scores, stdin, choices: choices() }
+    Settings {
+        lines,
+        prompt,
+        query,
+        show_scores,
+        stdin,
+        choices: choices(),
+    }
 }

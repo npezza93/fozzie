@@ -1,6 +1,6 @@
-use std::io::Write;
-use crate::settings;
 use crate::cursor;
+use crate::settings;
+use std::io::Write;
 
 pub struct Search {
     query: Vec<char>,
@@ -9,7 +9,10 @@ pub struct Search {
 
 impl Search {
     pub fn new() -> Search {
-        Search { query: vec![], position: 0 }
+        Search {
+            query: vec![],
+            position: 0,
+        }
     }
 
     fn current_col(&self, settings: &settings::Settings) -> usize {

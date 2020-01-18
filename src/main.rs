@@ -1,13 +1,13 @@
 #[macro_use]
 extern crate clap;
 
+use std::io::Write;
 use termion::event::Key;
 use termion::input::TermRead;
-use std::io::Write;
 
 pub mod cursor;
-pub mod settings;
 pub mod search;
+pub mod settings;
 
 fn main() {
     let settings = settings::parse();
