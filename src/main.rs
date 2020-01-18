@@ -8,6 +8,9 @@ use std::error::Error;
 use termion::event::Key;
 use termion::input::TermRead;
 
+use std::io::stdout;
+use termion::raw::IntoRawMode;
+
 pub mod choices;
 pub mod config;
 pub mod cursor;
@@ -22,6 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     choices.render();
     search.render();
 
+    let _stdout = stdout().into_raw_mode().unwrap(); // activate raw mode
     let tty = termion::get_tty()?;
     for c in tty.keys() {
         match c.unwrap() {
