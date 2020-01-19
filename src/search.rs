@@ -1,26 +1,33 @@
 use crate::cursor;
-use crate::writer;
+use std::io::Write;
 
-pub struct Search {
+pub struct Search<W> {
     query: Vec<char>,
     position: usize,
     prompt: String,
+    output: W,
 }
 
-impl Search {
-    pub fn new(prompt: String) -> Search {
+impl<W: Write> Search<W> {
+    pub fn new(prompt: String, output: W) -> Search<W> {
         Search {
             query: vec![],
             position: 0,
             prompt,
+            output,
         }
     }
 
-    pub fn render(&self) {
+    fn print(&mut self, text: String) {
+        write!(self.output, "{}", text).unwrap();
+        self.output.flush().unwrap();
+    }
+
+    pub fn render(&mut self) {
         let query: String = self.query.iter().collect();
         let current_col = self.prompt.chars().count() + self.position + 1;
 
-        writer::print(format!(
+        self.print(format!(
             "{}\r{}{}{}",
             cursor::clear_line(),
             self.prompt,
@@ -47,14 +54,14 @@ impl Search {
     pub fn left(&mut self) {
         if self.position > 0 {
             self.position -= 1;
-            writer::print(cursor::left(1));
+            self.print(cursor::left(1));
         }
     }
 
     pub fn right(&mut self) {
         if self.query.len() != self.position {
             self.position += 1;
-            writer::print(cursor::right(1));
+            self.print(cursor::right(1));
         }
     }
 }

@@ -1,23 +1,29 @@
 use crate::cursor;
-use crate::writer;
-use std::io::{stdin, BufRead};
+use std::io::{stdin, BufRead, Write};
 
-pub struct Choices {
+pub struct Choices<W> {
     choices: Vec<String>,
     // selected: u32,
     lines: usize,
+    output: W,
 }
 
-impl Choices {
-    pub fn new(lines: usize) -> Choices {
+impl<W: Write> Choices<W> {
+    pub fn new(lines: usize, output: W) -> Choices<W> {
         Choices {
             choices: stdin().lock().lines().map(|line| line.unwrap()).collect(),
             // selected: 0,
             lines,
+            output,
         }
     }
 
-    pub fn render(&self) {
+    fn print(&mut self, text: String) {
+        write!(self.output, "{}", text).unwrap();
+        self.output.flush().unwrap();
+    }
+
+    pub fn render(&mut self) {
         let mut choices = format!("{}\n\r", cursor::move_screen_up(self.lines));
         let choice_count = [self.choices.len(), self.lines];
 
@@ -27,7 +33,7 @@ impl Choices {
             });
 
             choices.push_str(&cursor::up(*count));
-            writer::print(choices);
+            self.print(choices);
         };
     }
 }
