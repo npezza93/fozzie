@@ -3,7 +3,7 @@ on: [push]
 name: tests
 
 jobs:
-  test:
+  unit:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
