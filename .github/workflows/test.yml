@@ -3,27 +3,19 @@ on: [push]
 name: tests
 
 jobs:
-  linux:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@master
-      - name: Install stable
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-      - uses: actions-rs/cargo@v1.0.1
-        with:
-          command: test
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@master
-      - name: Install stable
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            override: true
+          profile: minimal
+          toolchain: stable
+          override: true
       - uses: actions-rs/cargo@v1.0.1
         with:
           command: test
