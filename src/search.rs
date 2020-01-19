@@ -30,10 +30,10 @@ impl Search {
     }
 
     pub fn keypress(&mut self, character: char) {
-        self.query.push(character);
+        self.query.insert(self.position, character);
         self.position += 1;
 
-        writer::print(character.to_string());
+        self.render();
     }
 
     pub fn backspace(&mut self) {
