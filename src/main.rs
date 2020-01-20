@@ -5,10 +5,10 @@ use choices::Choices;
 use config::Config;
 use search::Search;
 use std::error::Error;
+use std::io::stdout;
+use std::process;
 use termion::event::Key;
 use termion::input::TermRead;
-
-use std::io::stdout;
 use termion::raw::IntoRawMode;
 
 pub mod choices;
@@ -29,9 +29,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         match c.unwrap() {
             Key::Char(c) => search.keypress(c),
             Key::Ctrl('u') => search.clear(),
-            Key::Alt(c) => println!("^{}", c),
-            Key::Ctrl(c) => println!("*{}", c),
-            Key::Esc => break,
+            Key::Ctrl('c') => process::exit(1),
+            Key::Esc => process::exit(1),
             Key::Left => search.left(),
             Key::Right => search.right(),
             Key::Up => println!("↑"),
