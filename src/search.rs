@@ -64,6 +64,12 @@ impl<W: Write> Search<W> {
             self.print(cursor::right(1));
         }
     }
+
+    pub fn clear(&mut self) {
+        self.query = vec![];
+        self.position = 0;
+        self.render();
+    }
 }
 
 #[cfg(test)]
@@ -166,6 +172,24 @@ mod tests {
                 cursor::col(4),
                 cursor::right(1)
             ),
+            actual
+        );
+    }
+
+    #[test]
+    fn test_clear() {
+        let output = NamedTempFile::new().expect("err");
+        let mut search = Search::new("> ".to_string(), &output);
+        search.query = vec!['a', 'b', 'c'];
+        search.position = 1;
+        search.clear();
+
+        let mut output = output.reopen().expect("err");
+        let mut actual = String::new();
+        output.read_to_string(&mut actual).expect("Err");
+
+        assert_eq!(
+            format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
             actual
         );
     }

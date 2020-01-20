@@ -28,6 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for c in tty.keys() {
         match c.unwrap() {
             Key::Char(c) => search.keypress(c),
+            Key::Ctrl('u') => search.clear(),
             Key::Alt(c) => println!("^{}", c),
             Key::Ctrl(c) => println!("*{}", c),
             Key::Esc => break,
