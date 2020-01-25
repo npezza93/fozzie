@@ -118,7 +118,7 @@ impl<W: Write> Choices<W> {
         (index..(index + self.max_choices))
             .map(|i| {
                 let choice = &self.choices[i];
-                format!("{}\n\r", choice.draw(i == self.selected)).to_string()
+                format!("{}\n\r", choice.draw(i == self.selected))
             })
             .collect::<Vec<String>>()
             .join("")
