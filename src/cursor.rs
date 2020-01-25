@@ -4,6 +4,10 @@ pub fn up(n: usize) -> String {
     format!("\x1B[{}A", n)
 }
 
+pub fn down(n: usize) -> String {
+    format!("\x1B[{}B", n)
+}
+
 pub fn left(n: usize) -> String {
     format!("\x1B[{}D", n)
 }
@@ -28,6 +32,18 @@ pub fn move_screen_up(n: usize) -> String {
     format!("{}{}", "\n".repeat(n), up(n))
 }
 
+pub fn clear_screen_down() -> String {
+    "\x1B[J".to_string()
+}
+
+pub fn save_position() -> String {
+    "\x1B7".to_string()
+}
+
+pub fn restore_position() -> String {
+    "\x1B8".to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,6 +51,11 @@ mod tests {
     #[test]
     fn test_up() {
         assert_eq!("\x1B[4A", up(4));
+    }
+
+    #[test]
+    fn test_down() {
+        assert_eq!("\x1B[4B", down(4));
     }
 
     #[test]
@@ -65,5 +86,20 @@ mod tests {
     #[test]
     fn test_move_screen_up() {
         assert_eq!("\n\n\n\n\n\x1B[5A", move_screen_up(5));
+    }
+
+    #[test]
+    fn test_clear_screen_down() {
+        assert_eq!("\x1B[J", clear_screen_down());
+    }
+
+    #[test]
+    fn test_save_position() {
+        assert_eq!("\x1B7", save_position());
+    }
+
+    #[test]
+    fn test_restore_position() {
+        assert_eq!("\x1B8", restore_position());
     }
 }
