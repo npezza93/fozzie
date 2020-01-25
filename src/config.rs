@@ -8,7 +8,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Config {
+    pub fn new() -> Self {
         let matches = Self::menu().get_matches();
 
         let lines = Self::parse_lines(&matches);
@@ -16,7 +16,7 @@ impl Config {
         let query = Self::parse_query(&matches);
         let show_scores = matches.is_present("show-scores");
 
-        Config {
+        Self {
             lines,
             prompt,
             query,
