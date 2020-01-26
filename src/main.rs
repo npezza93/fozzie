@@ -3,12 +3,13 @@ extern crate clap;
 
 use choices::Choices;
 use config::Config;
+use raw_tty::IntoRawMode;
 use search::Search;
 use std::error::Error;
-use std::io::{stdin, stdout};
+use std::fs;
+use std::io::stdin;
 use termion::event::Key;
 use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 
 pub mod choice;
 pub mod choices;
@@ -19,14 +20,18 @@ pub mod search;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let config = Config::new();
-    let mut search = Search::new(config.prompt, stdout_output());
-    let mut choices = Choices::new(config.lines, stdout_output(), stdin().lock());
+    let tty = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")?;
+
+    let mut search = Search::new(config.prompt, tty.try_clone()?);
+    let mut choices = Choices::new(config.lines, tty.try_clone()?, stdin().lock());
 
     choices.inital_draw();
     search.render();
 
-    let tty = termion::get_tty()?;
-    for c in tty.keys() {
+    for c in tty.into_raw_mode()?.keys() {
         match c.unwrap() {
             Key::Char(c) => search.keypress(c),
             Key::Ctrl('u') => search.clear(),
@@ -42,8 +47,4 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-}
-
-fn stdout_output() -> termion::raw::RawTerminal<std::io::Stdout> {
-    stdout().into_raw_mode().unwrap()
 }
