@@ -83,26 +83,29 @@ impl<W: Write> Choices<W> {
     fn should_redraw_next(&self) -> bool {
         self.selected == 0
             || ((self.max_choices - Self::OFFSET) <= self.selected
-                && self.last_index() > self.selected)
+                && (self.last_index() - Self::OFFSET) >= self.selected)
     }
 
     fn should_redraw_previous(&self) -> bool {
         self.selected == self.last_index()
             || ((self.max_choices - Self::OFFSET - 1) <= self.selected
-                && (self.last_index() - Self::OFFSET) > self.selected)
+                && (self.last_index() - Self::OFFSET - 1) >= self.selected)
     }
 
     fn next_down_movement(&self) -> usize {
-        if self.selected == self.last_index() {
-            self.max_choices - 1
+        if (self.last_index() - Self::OFFSET) <= self.selected {
+            self.max_choices - Self::OFFSET - 1
+                + (Self::OFFSET - (self.last_index() - self.selected))
         } else {
             self.selected % self.max_choices
         }
     }
 
     fn previous_down_movement(&self) -> usize {
-        if self.selected == (self.last_index() - Self::OFFSET) {
-            self.max_choices
+        if (self.last_index() - Self::OFFSET - 1) <= self.selected {
+            self.max_choices - Self::OFFSET
+                + 1
+                + (Self::OFFSET - (self.last_index() - self.selected))
         } else {
             (self.selected + 2) % self.max_choices
         }
