@@ -5,7 +5,7 @@ use choices::Choices;
 use config::Config;
 use search::Search;
 use std::error::Error;
-use std::io::stdout;
+use std::io::{stdin, stdout};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
@@ -20,7 +20,7 @@ pub mod search;
 fn main() -> Result<(), Box<dyn Error>> {
     let config = Config::new();
     let mut search = Search::new(config.prompt, stdout_output());
-    let mut choices = Choices::new(config.lines, stdout_output());
+    let mut choices = Choices::new(config.lines, stdout_output(), stdin().lock());
 
     choices.inital_draw();
     search.render();

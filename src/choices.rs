@@ -1,6 +1,6 @@
 use crate::choice::Choice;
 use crate::cursor;
-use std::io::{stdin, BufRead, Write};
+use std::io::{BufRead, Write};
 
 pub struct Choices<W> {
     choices: Vec<Choice>,
@@ -12,9 +12,8 @@ pub struct Choices<W> {
 impl<W: Write> Choices<W> {
     const OFFSET: usize = 1;
 
-    pub fn new(lines: usize, output: W) -> Choices<W> {
-        let choices: Vec<Choice> = stdin()
-            .lock()
+    pub fn new<R: BufRead>(lines: usize, output: W, input: R) -> Choices<W> {
+        let choices: Vec<Choice> = input
             .lines()
             .map(|line| line.unwrap())
             .map(Choice::new)
@@ -35,7 +34,7 @@ impl<W: Write> Choices<W> {
     }
 
     pub fn inital_draw(&mut self) {
-        self.print(format!("{}", cursor::move_screen_up(self.max_choices + 1)));
+        self.print(cursor::move_screen_up(self.max_choices + 1));
         self.draw_all();
     }
 
@@ -165,5 +164,55 @@ impl<W: Write> Choices<W> {
             self.choices[self.selected].draw(true),
             cursor::restore_position()
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::color;
+    use std::io::Read;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_new() {
+        let output = NamedTempFile::new().expect("err");
+        let input = "foo\nbar\nbaz\nboo\n".as_bytes();
+        let choices = Choices::new(4, &output, input);
+
+        let mut expected_choices: Vec<Choice> = Vec::new();
+        expected_choices.push(Choice::new("foo".to_string()));
+        expected_choices.push(Choice::new("bar".to_string()));
+        expected_choices.push(Choice::new("baz".to_string()));
+        expected_choices.push(Choice::new("boo".to_string()));
+
+        assert_eq!(4, choices.max_choices);
+        assert_eq!(0, choices.selected);
+        assert_eq!(expected_choices, choices.choices);
+    }
+
+    #[test]
+    fn test_initial_draw() {
+        let output = NamedTempFile::new().expect("err");
+        let input = "foo\nbar\n".as_bytes();
+        let mut choices = Choices::new(4, &output, input);
+
+        choices.inital_draw();
+        let mut output = output.reopen().expect("err");
+        let mut actual = String::new();
+        output.read_to_string(&mut actual).expect("Err");
+
+        assert_eq!(
+            format!(
+                "{}{}{}\r{}\r{}\n\rbar\n\r{}",
+                cursor::move_screen_up(3),
+                cursor::save_position(),
+                cursor::down(1),
+                cursor::clear_screen_down(),
+                color::inverse("foo"),
+                cursor::restore_position()
+            ),
+            actual
+        );
     }
 }
