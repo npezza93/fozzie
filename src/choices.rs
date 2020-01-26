@@ -35,12 +35,7 @@ impl<W: Write> Choices<W> {
     }
 
     pub fn inital_draw(&mut self) {
-        self.print(format!(
-            "{}{}{}",
-            cursor::save_position(),
-            cursor::move_screen_up(self.max_choices + 1),
-            cursor::restore_position(),
-        ));
+        self.print(format!("{}", cursor::move_screen_up(self.max_choices + 1)));
         self.draw_all();
     }
 
