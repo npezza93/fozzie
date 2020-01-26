@@ -1,6 +1,7 @@
 use fozzie::App;
 use std::error::Error;
+use std::process::exit;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    std::process::exit(App::run()?);
+    exit(App::run()?);
 }
