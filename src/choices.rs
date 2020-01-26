@@ -83,6 +83,10 @@ impl<W: Write> Choices<W> {
         ));
     }
 
+    pub fn select_none(&mut self) {
+        self.print(format!("{}{}", cursor::col(0), cursor::clear_screen_down()));
+    }
+
     fn should_redraw_next(&self) -> bool {
         self.selected == 0
             || ((self.max_choices - Self::OFFSET) <= self.selected
