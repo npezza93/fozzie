@@ -74,6 +74,15 @@ impl<W: Write> Choices<W> {
         }
     }
 
+    pub fn select(&mut self) {
+        self.print(format!(
+            "{}{}{}",
+            cursor::col(0),
+            cursor::clear_screen_down(),
+            self.choices[self.selected].content
+        ));
+    }
+
     fn should_redraw_next(&self) -> bool {
         self.selected == 0
             || ((self.max_choices - Self::OFFSET) <= self.selected

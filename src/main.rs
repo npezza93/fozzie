@@ -33,6 +33,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     for c in tty.into_raw_mode()?.keys() {
         match c.unwrap() {
+            Key::Char('\n') => {
+                choices.select();
+                break;
+            }
             Key::Char(c) => search.keypress(c),
             Key::Ctrl('u') => search.clear(),
             Key::Ctrl('c') => break,
