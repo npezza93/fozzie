@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Nick Pezza <npezza93@gmail.com>"]
 edition = "2018"
 
+[[bin]]
+name = "fozzie"
+path = "src/main.rs"
+
 [dependencies]
 "clap"="~2.31.2"
 "termion"="~1.5.4"
