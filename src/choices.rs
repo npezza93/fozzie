@@ -26,9 +26,9 @@ impl<W: Write> Choices<W> {
         };
 
         Choices {
-            choices,
             selected: 0,
-            output,
+            output: output,
+            choices,
             max_choices,
         }
     }
@@ -156,7 +156,7 @@ impl<W: Write> Choices<W> {
     }
 
     fn print(&mut self, text: String) {
-        write!(self.output, "{}", text).unwrap();
+        self.output.write(text.as_bytes()).unwrap();
         self.output.flush().unwrap();
     }
 
@@ -184,14 +184,13 @@ impl<W: Write> Choices<W> {
 mod tests {
     use super::*;
     use crate::color;
-    use std::io::Read;
-    use tempfile::NamedTempFile;
+    use std::io::Cursor;
 
     #[test]
     fn test_new() {
-        let output = NamedTempFile::new().expect("err");
+        let mut output = Cursor::new(vec![]);
         let input = "foo\nbar\nbaz\nboo\n".as_bytes();
-        let choices = Choices::new(4, &output, input);
+        let choices = Choices::new(4, &mut output, input);
 
         let mut expected_choices: Vec<Choice> = Vec::new();
         expected_choices.push(Choice::new("foo".to_string()));
@@ -206,14 +205,12 @@ mod tests {
 
     #[test]
     fn test_initial_draw() {
-        let output = NamedTempFile::new().expect("err");
+        let mut cursor = Cursor::new(vec![]);
         let input = "foo\nbar\n".as_bytes();
-        let mut choices = Choices::new(4, &output, input);
+        let mut choices = Choices::new(4, &mut cursor, input);
 
         choices.inital_draw();
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!(
@@ -225,7 +222,7 @@ mod tests {
                 color::inverse("foo"),
                 cursor::restore_position()
             ),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 }

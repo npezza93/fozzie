@@ -19,7 +19,7 @@ impl<W: Write> Search<W> {
     }
 
     fn print(&mut self, text: String) {
-        write!(self.output, "{}", text).unwrap();
+        self.output.write(text.as_bytes()).unwrap();
         self.output.flush().unwrap();
     }
 
@@ -75,71 +75,62 @@ impl<W: Write> Search<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Read;
-    use tempfile::NamedTempFile;
+    use std::io::Cursor;
 
     #[test]
     fn test_render() {
-        let output = NamedTempFile::new().expect("err");
-        let mut search = Search::new("> ".to_string(), &output);
+        let mut cursor = Cursor::new(vec![]);
+        let mut search = Search::new("> ".to_string(), &mut cursor);
         search.render();
 
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 
     #[test]
     fn test_keypress() {
-        let output = NamedTempFile::new().expect("err");
-        let mut search = Search::new("> ".to_string(), &output);
+        let mut cursor = Cursor::new(vec![]);
+        let mut search = Search::new("> ".to_string(), &mut cursor);
         search.keypress('b');
 
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!("{}\r> b{}", cursor::clear_line(), cursor::col(4)),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 
     #[test]
     fn test_backspace() {
-        let output = NamedTempFile::new().expect("err");
-        let mut search = Search::new("> ".to_string(), &output);
+        let mut cursor = Cursor::new(vec![]);
+        let mut search = Search::new("> ".to_string(), &mut cursor);
         search.query = vec!['a', 'b', 'c'];
         search.position = 3;
         search.backspace();
 
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!("{}\r> ab{}", cursor::clear_line(), cursor::col(5)),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 
     #[test]
     fn test_left() {
-        let output = NamedTempFile::new().expect("err");
-        let mut search = Search::new("> ".to_string(), &output);
+        let mut cursor = Cursor::new(vec![]);
+        let mut search = Search::new("> ".to_string(), &mut cursor);
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
         search.render();
         search.left();
 
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!(
@@ -148,22 +139,20 @@ mod tests {
                 cursor::col(4),
                 cursor::left(1)
             ),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 
     #[test]
     fn test_right() {
-        let output = NamedTempFile::new().expect("err");
-        let mut search = Search::new("> ".to_string(), &output);
+        let mut cursor = Cursor::new(vec![]);
+        let mut search = Search::new("> ".to_string(), &mut cursor);
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
         search.render();
         search.right();
 
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!(
@@ -172,25 +161,23 @@ mod tests {
                 cursor::col(4),
                 cursor::right(1)
             ),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 
     #[test]
     fn test_clear() {
-        let output = NamedTempFile::new().expect("err");
-        let mut search = Search::new("> ".to_string(), &output);
+        let mut cursor = Cursor::new(vec![]);
+        let mut search = Search::new("> ".to_string(), &mut cursor);
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
         search.clear();
 
-        let mut output = output.reopen().expect("err");
-        let mut actual = String::new();
-        output.read_to_string(&mut actual).expect("Err");
+        let actual = cursor.into_inner();
 
         assert_eq!(
             format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
-            actual
+            String::from_utf8(actual).unwrap()
         );
     }
 }
