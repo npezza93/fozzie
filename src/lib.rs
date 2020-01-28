@@ -6,6 +6,7 @@ pub mod choices;
 pub mod color;
 pub mod config;
 pub mod cursor;
+pub mod matcher;
 pub mod search;
 
 use choices::Choices;
