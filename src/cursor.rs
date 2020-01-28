@@ -28,10 +28,6 @@ pub fn col(n: usize) -> String {
     format!("\x1B[{}G", n)
 }
 
-pub fn move_screen_up(n: usize) -> String {
-    format!("{}{}", "\n".repeat(n), up(n))
-}
-
 pub fn clear_screen_down() -> String {
     "\x1B[J".to_string()
 }
@@ -81,11 +77,6 @@ mod tests {
     #[test]
     fn test_col() {
         assert_eq!("\x1B[8G", col(8));
-    }
-
-    #[test]
-    fn test_move_screen_up() {
-        assert_eq!("\n\n\n\n\n\x1B[5A", move_screen_up(5));
     }
 
     #[test]

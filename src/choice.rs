@@ -31,30 +31,30 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let choice = Choice::new("foo".to_string());
+        let choice = Choice::new(String::from("foo"));
 
         assert_eq!("foo", choice.content);
     }
 
     #[test]
     fn test_draw_not_selected() {
-        let choice = Choice::new("foo".to_string());
+        let choice = Choice::new(String::from("foo"));
 
         assert_eq!("foo", choice.draw(false));
     }
 
     #[test]
     fn test_draw_selected() {
-        let choice = Choice::new("foo".to_string());
+        let choice = Choice::new(String::from("foo"));
 
         assert_eq!("\x1B[7mfoo\x1B[0m", choice.draw(true));
     }
 
     #[test]
     fn test_equality() {
-        let choice1 = Choice::new("foo".to_string());
-        let choice2 = Choice::new("foo".to_string());
-        let choice3 = Choice::new("bar".to_string());
+        let choice1 = Choice::new(String::from("foo"));
+        let choice2 = Choice::new(String::from("foo"));
+        let choice3 = Choice::new(String::from("bar"));
 
         assert_eq!(choice1, choice2);
         assert_ne!(choice1, choice3);

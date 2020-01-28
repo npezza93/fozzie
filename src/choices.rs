@@ -33,9 +33,15 @@ impl<W: Write> Choices<W> {
         }
     }
 
-    pub fn inital_draw(&mut self) {
-        self.print(cursor::move_screen_up(self.max_choices + 1));
-        self.draw_all();
+    pub fn draw(&mut self) {
+        self.print(format!(
+            "{}{}\r{}\r{}{}",
+            cursor::save_position(),
+            cursor::down(1),
+            cursor::clear_screen_down(),
+            self.draw_choices(),
+            cursor::restore_position(),
+        ));
     }
 
     pub fn previous(&mut self) {
@@ -45,15 +51,7 @@ impl<W: Write> Choices<W> {
             self.selected -= 1;
         }
 
-        if self.should_redraw_previous() {
-            self.draw_all();
-        } else {
-            self.swap_active_choices(
-                self.previous_down_movement(),
-                cursor::up(1),
-                self.selected + 1,
-            );
-        }
+        self.draw();
     }
 
     pub fn next(&mut self) {
@@ -63,15 +61,7 @@ impl<W: Write> Choices<W> {
             self.selected += 1;
         }
 
-        if self.should_redraw_next() {
-            self.draw_all();
-        } else {
-            self.swap_active_choices(
-                self.next_down_movement(),
-                cursor::down(1),
-                self.selected - 1,
-            );
-        }
+        self.draw();
     }
 
     pub fn select(&mut self) {
@@ -85,37 +75,6 @@ impl<W: Write> Choices<W> {
 
     pub fn select_none(&mut self) {
         self.print(format!("{}{}", cursor::col(0), cursor::clear_screen_down()));
-    }
-
-    fn should_redraw_next(&self) -> bool {
-        self.selected == 0
-            || ((self.max_choices - Self::OFFSET) <= self.selected
-                && (self.last_index() - Self::OFFSET) >= self.selected)
-    }
-
-    fn should_redraw_previous(&self) -> bool {
-        self.selected == self.last_index()
-            || ((self.max_choices - Self::OFFSET - 1) <= self.selected
-                && (self.last_index() - Self::OFFSET - 1) >= self.selected)
-    }
-
-    fn next_down_movement(&self) -> usize {
-        if (self.last_index() - Self::OFFSET) <= self.selected {
-            self.max_choices - Self::OFFSET - 1
-                + (Self::OFFSET - (self.last_index() - self.selected))
-        } else {
-            self.selected % self.max_choices
-        }
-    }
-
-    fn previous_down_movement(&self) -> usize {
-        if (self.last_index() - Self::OFFSET - 1) <= self.selected {
-            self.max_choices - Self::OFFSET
-                + 1
-                + (Self::OFFSET - (self.last_index() - self.selected))
-        } else {
-            (self.selected + 2) % self.max_choices
-        }
     }
 
     fn last_index(&self) -> usize {
@@ -144,39 +103,9 @@ impl<W: Write> Choices<W> {
         }
     }
 
-    fn draw_all(&mut self) {
-        self.print(format!(
-            "{}{}\r{}\r{}{}",
-            cursor::save_position(),
-            cursor::down(1),
-            cursor::clear_screen_down(),
-            self.draw_choices(),
-            cursor::restore_position(),
-        ));
-    }
-
     fn print(&mut self, text: String) {
         self.output.write(text.as_bytes()).unwrap();
         self.output.flush().unwrap();
-    }
-
-    fn swap_active_choices(
-        &mut self,
-        initial_down_n: usize,
-        movement: String,
-        inactive_choice_index: usize,
-    ) {
-        self.print(format!(
-            "{}{}\r{}{}{}\r{}{}{}",
-            cursor::save_position(),
-            cursor::down(initial_down_n),
-            cursor::clear_line(),
-            self.choices[inactive_choice_index].draw(false),
-            movement,
-            cursor::clear_line(),
-            self.choices[self.selected].draw(true),
-            cursor::restore_position()
-        ));
     }
 }
 
@@ -193,10 +122,10 @@ mod tests {
         let choices = Choices::new(4, &mut output, input);
 
         let mut expected_choices: Vec<Choice> = Vec::new();
-        expected_choices.push(Choice::new("foo".to_string()));
-        expected_choices.push(Choice::new("bar".to_string()));
-        expected_choices.push(Choice::new("baz".to_string()));
-        expected_choices.push(Choice::new("boo".to_string()));
+        expected_choices.push(Choice::new(String::from("foo")));
+        expected_choices.push(Choice::new(String::from("bar")));
+        expected_choices.push(Choice::new(String::from("baz")));
+        expected_choices.push(Choice::new(String::from("boo")));
 
         assert_eq!(4, choices.max_choices);
         assert_eq!(0, choices.selected);
@@ -204,18 +133,17 @@ mod tests {
     }
 
     #[test]
-    fn test_initial_draw() {
+    fn test_draw() {
         let mut cursor = Cursor::new(vec![]);
         let input = "foo\nbar\n".as_bytes();
         let mut choices = Choices::new(4, &mut cursor, input);
 
-        choices.inital_draw();
+        choices.draw();
         let actual = cursor.into_inner();
 
         assert_eq!(
             format!(
-                "{}{}{}\r{}\r{}\n\rbar\n\r{}",
-                cursor::move_screen_up(3),
+                "{}{}\r{}\r{}\n\rbar\n\r{}",
                 cursor::save_position(),
                 cursor::down(1),
                 cursor::clear_screen_down(),

@@ -33,7 +33,7 @@ impl App {
         let mut search = Search::new(config.prompt, tty.try_clone()?);
         let mut choices = Choices::new(config.lines, tty.try_clone()?, stdin().lock());
 
-        choices.inital_draw();
+        choices.draw();
         search.render();
 
         for c in tty.into_raw_mode()?.keys() {
