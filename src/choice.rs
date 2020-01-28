@@ -1,6 +1,6 @@
 use crate::color;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Choice {
     pub content: String,
 }
@@ -17,11 +17,11 @@ impl Choice {
             self.content.to_string()
         }
     }
-}
 
-impl PartialEq for Choice {
-    fn eq(&self, other: &Self) -> bool {
-        self.content == other.content
+    pub fn contains(&self, character: char) -> bool {
+        self.content
+            .chars()
+            .any(|cchar| cchar.eq_ignore_ascii_case(&character))
     }
 }
 
@@ -58,5 +58,13 @@ mod tests {
 
         assert_eq!(choice1, choice2);
         assert_ne!(choice1, choice3);
+    }
+
+    #[test]
+    fn test_contains() {
+        let choice = Choice::new(String::from("foo"));
+
+        assert!(choice.contains('f'));
+        assert!(!choice.contains('z'));
     }
 }
