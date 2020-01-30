@@ -8,16 +8,15 @@ pub mod config;
 pub mod cursor;
 pub mod matcher;
 pub mod search;
+pub mod terminal;
 
 use choices::Choices;
 use config::Config;
-use raw_tty::IntoRawMode;
+use terminal::Terminal;
 use search::Search;
 use std::error::Error;
-use std::fs::{self, File};
 use termion::event::Key;
-use termion::input::TermRead;
-use std::io::{self, stdin, BufRead, Write};
+use std::io::{stdin, BufRead};
 
 pub struct App {}
 
@@ -26,44 +25,42 @@ impl App {
         let config = Config::new();
         let mut exit_code = 0;
 
-        let mut tty = tty()?;
+        let mut terminal = Terminal::new()?;
         let parsed_choices: Vec<String> = stdin().lock().lines().map(Result::unwrap).collect();
         let mut search = Search::new(config.prompt);
         let mut choices = Choices::new(config.lines, &parsed_choices);
 
-        write(&mut tty, &search.draw());
-        write(&mut tty, &choices.draw());
+        terminal.print(&search.draw());
+        terminal.print(&choices.draw());
 
-        for c in tty.try_clone()?.into_raw_mode()?.keys() {
+        for c in terminal.keys()? {
             match c.unwrap() {
                 Key::Char('\n') => {
-                    write(&mut tty, &choices.select());
+                    terminal.print(&choices.select());
                     break;
                 },
-                Key::Char('u') => write(&mut tty, &search.clear()),
-                Key::Char(c) => write(&mut tty, &search.keypress(c)),
+                Key::Char('u') => terminal.print(&search.clear()),
+                Key::Char(c) => terminal.print(&search.keypress(c)),
+                Key::Up => terminal.print(&choices.previous()),
+                Key::Down => terminal.print(&choices.next()),
                 Key::Esc | Key::Ctrl('c') => {
                     exit_code = 1;
-                    write(&mut tty, &choices.cancel());
+                    terminal.print(&choices.cancel());
                     break;
                 },
                 Key::Left => {
                     if let Some(text) = search.left() {
-                        write(&mut tty, text);
+                        terminal.print(text);
                    }
                 },
                 Key::Right => {
                     if let Some(text) = search.right() {
-                        write(&mut tty, text);
+                        terminal.print(text);
                    }
-                },
-                Key::Up => write(&mut tty, &choices.previous()),
-                Key::Down => {
-                    write(&mut tty, &choices.next());
                 },
                 Key::Backspace => {
                     if let Some(text) = search.backspace() {
-                        write(&mut tty, &text);
+                        terminal.print(&text);
                    }
                 },
                 _ => {}
@@ -72,13 +69,4 @@ impl App {
 
         Ok(exit_code)
     }
-}
-
-fn tty() -> Result<File, io::Error> {
-    fs::OpenOptions::new().read(true).write(true).open("/dev/tty")
-}
-
-fn write(output: &mut File, text: &str) {
-    output.write(text.as_bytes()).unwrap();
-    output.flush().unwrap();
 }
