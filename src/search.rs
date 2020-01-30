@@ -1,183 +1,174 @@
 use crate::cursor;
-use std::io::Write;
 
-pub struct Search<W> {
+pub struct Search {
     query: Vec<char>,
     position: usize,
     prompt: String,
-    output: W,
 }
 
-impl<W: Write> Search<W> {
-    pub fn new(prompt: String, output: W) -> Search<W> {
+impl Search {
+    pub fn new(prompt: String) -> Search {
         Search {
             query: vec![],
             position: 0,
             prompt,
-            output,
         }
     }
 
-    fn print(&mut self, text: String) {
-        self.output.write(text.as_bytes()).unwrap();
-        self.output.flush().unwrap();
-    }
-
-    pub fn render(&mut self) {
+    pub fn draw(&self) -> String {
         let query: String = self.query.iter().collect();
         let current_col = self.prompt.chars().count() + self.position + 1;
 
-        self.print(format!(
+        format!(
             "{}\r{}{}{}",
             cursor::clear_line(),
             self.prompt,
             query,
             cursor::col(current_col)
-        ));
+        )
     }
 
-    pub fn keypress(&mut self, character: char) {
+    pub fn keypress(&mut self, character: char) -> String {
         self.query.insert(self.position, character);
         self.position += 1;
 
-        self.render();
+        self.draw()
     }
 
-    pub fn backspace(&mut self) {
+    pub fn backspace(&mut self) -> Option<String> {
         if self.position > 0 {
             self.position -= 1;
             self.query.remove(self.position);
-            self.render();
+            Some(self.draw())
+        } else {
+            None
         }
     }
 
-    pub fn left(&mut self) {
+    pub fn left(&mut self) -> Option<&str> {
         if self.position > 0 {
             self.position -= 1;
-            self.print(cursor::left(1));
+            Some(cursor::left())
+        } else {
+            None
         }
     }
 
-    pub fn right(&mut self) {
+    pub fn right(&mut self) -> Option<&str> {
         if self.query.len() != self.position {
             self.position += 1;
-            self.print(cursor::right(1));
+            Some(cursor::right())
+        } else {
+            None
         }
     }
 
-    pub fn clear(&mut self) {
+    pub fn clear(&mut self) -> String {
         self.query = vec![];
         self.position = 0;
-        self.render();
+        self.draw()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
 
     #[test]
-    fn test_render() {
-        let mut cursor = Cursor::new(vec![]);
-        let mut search = Search::new("> ".to_string(), &mut cursor);
-        search.render();
-
-        let actual = cursor.into_inner();
+    fn test_draw() {
+        let search = Search::new("> ".to_string());
 
         assert_eq!(
             format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
-            String::from_utf8(actual).unwrap()
+            search.draw()
         );
     }
 
     #[test]
     fn test_keypress() {
-        let mut cursor = Cursor::new(vec![]);
-        let mut search = Search::new("> ".to_string(), &mut cursor);
-        search.keypress('b');
-
-        let actual = cursor.into_inner();
+        let mut search = Search::new("> ".to_string());
 
         assert_eq!(
             format!("{}\r> b{}", cursor::clear_line(), cursor::col(4)),
-            String::from_utf8(actual).unwrap()
+            search.keypress('b')
         );
+        assert_eq!(1, search.position);
     }
 
     #[test]
     fn test_backspace() {
-        let mut cursor = Cursor::new(vec![]);
-        let mut search = Search::new("> ".to_string(), &mut cursor);
+        let mut search = Search::new("> ".to_string());
         search.query = vec!['a', 'b', 'c'];
         search.position = 3;
-        search.backspace();
-
-        let actual = cursor.into_inner();
 
         assert_eq!(
             format!("{}\r> ab{}", cursor::clear_line(), cursor::col(5)),
-            String::from_utf8(actual).unwrap()
+            search.backspace().unwrap()
         );
+        assert_eq!(2, search.position);
+    }
+
+    #[test]
+    fn test_backspace_none() {
+        let mut search = Search::new("> ".to_string());
+        search.query = vec!['a', 'b', 'c'];
+        search.position = 0;
+
+        assert!(search.backspace().is_none());
+        assert_eq!(0, search.position);
     }
 
     #[test]
     fn test_left() {
-        let mut cursor = Cursor::new(vec![]);
-        let mut search = Search::new("> ".to_string(), &mut cursor);
+        let mut search = Search::new("> ".to_string());
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
-        search.render();
-        search.left();
 
-        let actual = cursor.into_inner();
+        assert_eq!(format!("{}", cursor::left()), search.left().unwrap());
+        assert_eq!(0, search.position);
+    }
 
-        assert_eq!(
-            format!(
-                "{}\r> abc{}{}",
-                cursor::clear_line(),
-                cursor::col(4),
-                cursor::left(1)
-            ),
-            String::from_utf8(actual).unwrap()
-        );
+    #[test]
+    fn test_left_none() {
+        let mut search = Search::new("> ".to_string());
+        search.query = vec!['a', 'b', 'c'];
+        search.position = 0;
+
+        assert!(search.left().is_none());
+        assert_eq!(0, search.position);
     }
 
     #[test]
     fn test_right() {
-        let mut cursor = Cursor::new(vec![]);
-        let mut search = Search::new("> ".to_string(), &mut cursor);
+        let mut search = Search::new("> ".to_string());
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
-        search.render();
-        search.right();
 
-        let actual = cursor.into_inner();
+        assert_eq!(format!("{}", cursor::right()), search.right().unwrap());
+        assert_eq!(2, search.position);
+    }
 
-        assert_eq!(
-            format!(
-                "{}\r> abc{}{}",
-                cursor::clear_line(),
-                cursor::col(4),
-                cursor::right(1)
-            ),
-            String::from_utf8(actual).unwrap()
-        );
+    #[test]
+    fn test_right_none() {
+        let mut search = Search::new("> ".to_string());
+        search.query = vec!['a', 'b', 'c'];
+        search.position = 3;
+
+        assert!(search.right().is_none());
+        assert_eq!(3, search.position);
     }
 
     #[test]
     fn test_clear() {
-        let mut cursor = Cursor::new(vec![]);
-        let mut search = Search::new("> ".to_string(), &mut cursor);
+        let mut search = Search::new("> ".to_string());
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
         search.clear();
 
-        let actual = cursor.into_inner();
-
         assert_eq!(
             format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
-            String::from_utf8(actual).unwrap()
+            search.clear()
         );
+        assert_eq!(0, search.position);
     }
 }

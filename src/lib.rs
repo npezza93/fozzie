@@ -14,10 +14,10 @@ use config::Config;
 use raw_tty::IntoRawMode;
 use search::Search;
 use std::error::Error;
-use std::fs;
-use std::io::stdin;
+use std::fs::{self, File};
 use termion::event::Key;
 use termion::input::TermRead;
+use std::io::{self, stdin, BufRead, Write};
 
 pub struct App {}
 
@@ -25,44 +25,60 @@ impl App {
     pub fn run() -> Result<i32, Box<dyn Error>> {
         let config = Config::new();
         let mut exit_code = 0;
-        let tty = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("/dev/tty")?;
 
-        let mut search = Search::new(config.prompt, tty.try_clone()?);
-        let mut choices = Choices::new(config.lines, tty.try_clone()?, stdin().lock());
+        let mut tty = tty()?;
+        let parsed_choices: Vec<String> = stdin().lock().lines().map(Result::unwrap).collect();
+        let mut search = Search::new(config.prompt);
+        let mut choices = Choices::new(config.lines, &parsed_choices);
 
-        choices.draw();
-        search.render();
+        write(&mut tty, &search.draw());
+        write(&mut tty, &choices.draw());
 
-        for c in tty.into_raw_mode()?.keys() {
+        for c in tty.try_clone()?.into_raw_mode()?.keys() {
             match c.unwrap() {
                 Key::Char('\n') => {
-                    choices.select();
+                    write(&mut tty, &choices.select());
                     break;
-                }
-                Key::Char(c) => search.keypress(c),
-                Key::Ctrl('u') => search.clear(),
-                Key::Ctrl('c') => {
+                },
+                Key::Char('u') => write(&mut tty, &search.clear()),
+                Key::Char(c) => write(&mut tty, &search.keypress(c)),
+                Key::Esc | Key::Ctrl('c') => {
                     exit_code = 1;
-                    choices.select_none();
+                    write(&mut tty, &choices.cancel());
                     break;
-                }
-                Key::Esc => {
-                    exit_code = 1;
-                    choices.select_none();
-                    break;
-                }
-                Key::Left => search.left(),
-                Key::Right => search.right(),
-                Key::Up => choices.previous(),
-                Key::Down => choices.next(),
-                Key::Backspace => search.backspace(),
+                },
+                Key::Left => {
+                    if let Some(text) = search.left() {
+                        write(&mut tty, text);
+                   }
+                },
+                Key::Right => {
+                    if let Some(text) = search.right() {
+                        write(&mut tty, text);
+                   }
+                },
+                Key::Up => write(&mut tty, &choices.previous()),
+                Key::Down => {
+                    write(&mut tty, &choices.next());
+                },
+                Key::Backspace => {
+                    if let Some(text) = search.backspace() {
+                        write(&mut tty, &text);
+                   }
+                },
                 _ => {}
             }
         }
 
         Ok(exit_code)
     }
+}
+
+fn tty() -> Result<File, io::Error> {
+    fs::OpenOptions::new().read(true).write(true).open("/dev/tty")
+}
+
+fn write(output: &mut File, text: &str) {
+    output.write(text.as_bytes()).unwrap();
+    output.flush().unwrap();
 }
