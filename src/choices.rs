@@ -64,7 +64,7 @@ impl<'a> Choices<'a> {
     }
 
     pub fn cancel(&self) -> String {
-        format!("\r{}",  cursor::clear_screen_down())
+        format!("\r{}", cursor::clear_screen_down())
     }
 
     fn last_index(&self) -> usize {
@@ -101,7 +101,12 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let input: Vec<String> = vec!["foo".to_string(), "bar".to_string(), "baz".to_string(), "boo".to_string()];
+        let input: Vec<String> = vec![
+            "foo".to_string(),
+            "bar".to_string(),
+            "baz".to_string(),
+            "boo".to_string(),
+        ];
         let choices = Choices::new(4, &input);
 
         let expected_choices: &[String] = &input;
@@ -113,7 +118,12 @@ mod tests {
 
     #[test]
     fn test_new_max_choices() {
-        let input: Vec<String> = vec!["foo".to_string(), "bar".to_string(), "baz".to_string(), "boo".to_string()];
+        let input: Vec<String> = vec![
+            "foo".to_string(),
+            "bar".to_string(),
+            "baz".to_string(),
+            "boo".to_string(),
+        ];
         let choices = Choices::new(2, &input);
 
         assert_eq!(2, choices.max_choices);
@@ -236,6 +246,5 @@ mod tests {
             format!("\r{}", cursor::clear_screen_down()),
             choices.cancel()
         );
-
     }
 }

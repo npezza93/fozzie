@@ -1,6 +1,6 @@
 use crate::color;
 
-pub fn draw(choice:  &str, selected: bool) -> String {
+pub fn draw(choice: &str, selected: bool) -> String {
     if selected {
         color::inverse(choice)
     } else {

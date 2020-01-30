@@ -12,11 +12,11 @@ pub mod terminal;
 
 use choices::Choices;
 use config::Config;
-use terminal::Terminal;
 use search::Search;
 use std::error::Error;
-use termion::event::Key;
 use std::io::{stdin, BufRead};
+use terminal::Terminal;
+use termion::event::Key;
 
 pub struct App {}
 
@@ -38,7 +38,7 @@ impl App {
                 Key::Char('\n') => {
                     terminal.print(&choices.select());
                     break;
-                },
+                }
                 Key::Char('u') => terminal.print(&search.clear()),
                 Key::Char(c) => terminal.print(&search.keypress(c)),
                 Key::Up => terminal.print(&choices.previous()),
@@ -47,22 +47,22 @@ impl App {
                     exit_code = 1;
                     terminal.print(&choices.cancel());
                     break;
-                },
+                }
                 Key::Left => {
                     if let Some(text) = search.left() {
                         terminal.print(text);
-                   }
-                },
+                    }
+                }
                 Key::Right => {
                     if let Some(text) = search.right() {
                         terminal.print(text);
-                   }
-                },
+                    }
+                }
                 Key::Backspace => {
                     if let Some(text) = search.backspace() {
                         terminal.print(&text);
-                   }
-                },
+                    }
+                }
                 _ => {}
             }
         }
