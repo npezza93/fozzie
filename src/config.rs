@@ -62,7 +62,7 @@ impl Config {
 
     fn menu<'a>() -> App<'a, 'a> {
         App::new("fozzie")
-            .version("0.1.0")
+            .version(env!("CARGO_PKG_VERSION"))
             .author("Nick Pezza")
             .arg(Self::lines_arg())
             .arg(Self::prompt_arg())
