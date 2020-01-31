@@ -36,7 +36,7 @@ impl App {
         for c in terminal.keys()? {
             match c.unwrap() {
                 Key::Char('\n') => {
-                    terminal.print(&choices.select());
+                    choices.select(&mut terminal);
                     break;
                 }
                 Key::Char('u') => terminal.print(&search.clear()),

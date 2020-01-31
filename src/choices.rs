@@ -1,3 +1,4 @@
+use crate::terminal::Terminal;
 use crate::choice;
 use crate::cursor;
 use crate::matcher;
@@ -41,12 +42,11 @@ impl<'a> Choices<'a> {
         self.draw()
     }
 
-    pub fn select(&self) -> String {
-        format!(
-            "\r{}{}",
-            cursor::clear_screen_down(),
-            self.choices[self.selected]
-        )
+    pub fn select(&self, terminal: &mut Terminal) {
+        terminal.print(
+            &format!("\r{}", cursor::clear_screen_down())
+        );
+        println!("{}", self.matches[self.selected]);
     }
 
     pub fn cancel(&self) -> String {
@@ -251,18 +251,6 @@ mod tests {
             choices.next()
         );
         assert_eq!(1, choices.selected);
-    }
-
-    #[test]
-    fn test_select() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
-        let mut choices = Choices::new(4, &input);
-        choices.filter(&vec![]);
-
-        assert_eq!(
-            format!("\r{}foo", cursor::clear_screen_down()),
-            choices.select()
-        );
     }
 
     #[test]
