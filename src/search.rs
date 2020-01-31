@@ -1,7 +1,7 @@
 use crate::cursor;
 
 pub struct Search {
-    query: Vec<char>,
+    pub query: Vec<char>,
     position: usize,
     prompt: String,
 }

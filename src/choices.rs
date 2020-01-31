@@ -1,38 +1,24 @@
 use crate::choice;
 use crate::cursor;
+use crate::matcher;
 
 pub struct Choices<'a> {
     choices: &'a [String],
     selected: usize,
     max_choices: usize,
+    matches: Vec<&'a String>,
 }
 
 impl<'a> Choices<'a> {
     const OFFSET: usize = 1;
 
-    pub fn new(lines: usize, choices: &'a [String]) -> Choices<'a> {
-        let max_choices = if choices.len() < lines {
-            choices.len()
-        } else {
-            lines
-        };
-
+    pub fn new(max_choices: usize, choices: &'a [String]) -> Choices<'a> {
         Choices {
             selected: 0,
+            matches: vec![],
             choices,
             max_choices,
         }
-    }
-
-    pub fn draw(&self) -> String {
-        format!(
-            "{}{}\r{}\r{}{}",
-            cursor::save_position(),
-            cursor::down(),
-            cursor::clear_screen_down(),
-            self.draw_choices(),
-            cursor::restore_position(),
-        )
     }
 
     pub fn previous(&mut self) -> String {
@@ -67,27 +53,64 @@ impl<'a> Choices<'a> {
         format!("\r{}", cursor::clear_screen_down())
     }
 
+    pub fn filter(&mut self, query: &Vec<char>) -> String {
+        self.selected = 0;
+        self.matches = self
+            .choices
+            .iter()
+            .filter(|choice| matcher::matches(&query, &choice))
+            .collect();
+
+        self.draw()
+    }
+
+    fn draw(&self) -> String {
+        format!(
+            "{}{}\r{}\r{}{}",
+            cursor::save_position(),
+            cursor::down(),
+            cursor::clear_screen_down(),
+            self.draw_choices(),
+            cursor::restore_position(),
+        )
+    }
+
     fn last_index(&self) -> usize {
-        self.choices.len() - 1
+        if self.matches.is_empty() {
+            0
+        } else {
+            self.matches.len() - 1
+        }
     }
 
     fn draw_choices(&self) -> String {
-        let index = self.starting_position();
-
-        (index..(index + self.max_choices))
+        self.drawn_range()
             .map(|i| {
-                let choice = &self.choices[i];
+                let choice = &self.matches[i];
                 format!("{}\n\r", choice::draw(choice, i == self.selected))
             })
             .collect::<Vec<String>>()
             .join("")
     }
 
+    fn drawn_range(&self) -> std::ops::Range<usize> {
+        let index = self.starting_position();
+
+        let max_choices = if self.matches.len() < self.max_choices {
+            self.matches.len()
+        } else {
+            self.max_choices
+        };
+
+        index..(index + max_choices)
+    }
+
     fn starting_position(&self) -> usize {
         if self.selected + Self::OFFSET < self.max_choices {
             0
-        } else if self.selected + Self::OFFSET + 1 >= self.choices.len() {
-            self.choices.len() - self.max_choices
+        } else if self.selected + Self::OFFSET + 1 >= self.matches.len() && !self.matches.is_empty()
+        {
+            self.matches.len() - self.max_choices
         } else {
             self.selected + Self::OFFSET + 1 - self.max_choices
         }
@@ -130,9 +153,9 @@ mod tests {
     }
 
     #[test]
-    fn test_draw() {
+    fn test_filter() {
         let input: Vec<String> = vec!["foo".to_string(), "bar".to_string()];
-        let choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input);
 
         assert_eq!(
             format!(
@@ -143,14 +166,16 @@ mod tests {
                 color::inverse("foo"),
                 cursor::restore_position()
             ),
-            choices.draw()
+            choices.filter(&vec![])
         );
+        assert_eq!(vec!["foo", "bar"], choices.matches);
     }
 
     #[test]
     fn test_previous_when_wrapping() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
+        choices.filter(&vec![]);
 
         assert_eq!(
             format!(
@@ -170,6 +195,7 @@ mod tests {
     fn test_previous() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
+        choices.filter(&vec![]);
         choices.selected = 1;
 
         assert_eq!(
@@ -190,6 +216,7 @@ mod tests {
     fn test_next_when_wrapping() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
+        choices.filter(&vec![]);
         choices.selected = 1;
 
         assert_eq!(
@@ -210,7 +237,7 @@ mod tests {
     fn test_next() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
-        choices.selected = 0;
+        choices.filter(&vec![]);
 
         assert_eq!(
             format!(
@@ -229,7 +256,8 @@ mod tests {
     #[test]
     fn test_select() {
         let input = vec!["foo".to_string(), "bar".to_string()];
-        let choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input);
+        choices.filter(&vec![]);
 
         assert_eq!(
             format!("\r{}foo", cursor::clear_screen_down()),

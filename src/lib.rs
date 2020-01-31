@@ -31,7 +31,7 @@ impl App {
         let mut choices = Choices::new(config.lines, &parsed_choices);
 
         terminal.print(&search.draw());
-        terminal.print(&choices.draw());
+        terminal.print(&choices.filter(&search.query));
 
         for c in terminal.keys()? {
             match c.unwrap() {
@@ -40,7 +40,10 @@ impl App {
                     break;
                 }
                 Key::Char('u') => terminal.print(&search.clear()),
-                Key::Char(c) => terminal.print(&search.keypress(c)),
+                Key::Char(c) => {
+                    terminal.print(&search.keypress(c));
+                    terminal.print(&choices.filter(&search.query));
+                }
                 Key::Up => terminal.print(&choices.previous()),
                 Key::Down => terminal.print(&choices.next()),
                 Key::Esc | Key::Ctrl('c') => {
@@ -61,6 +64,7 @@ impl App {
                 Key::Backspace => {
                     if let Some(text) = search.backspace() {
                         terminal.print(&text);
+                        terminal.print(&choices.filter(&search.query));
                     }
                 }
                 _ => {}
