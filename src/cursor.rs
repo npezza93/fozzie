@@ -2,8 +2,8 @@ pub fn col(n: usize) -> String {
     format!("\x1B[{}G", n)
 }
 
-pub fn down() -> &'static str {
-    "\x1B[1B"
+pub fn up(n : usize) -> String {
+    format!("\x1B[{}A", n)
 }
 
 pub fn left() -> &'static str {
@@ -35,8 +35,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_down() {
-        assert_eq!("\x1B[1B", down());
+    fn test_up() {
+        assert_eq!("\x1B[2A", up(2));
     }
 
     #[test]

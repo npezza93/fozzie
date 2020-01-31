@@ -22,6 +22,12 @@ impl<'a> Choices<'a> {
         }
     }
 
+    pub fn initial_draw(&mut self, terminal: &mut Terminal) {
+        self.filter_choices(&vec![]);
+
+        terminal.print(&format!("{}{}\r", self.draw_choices(), cursor::up(self.max_choices())));
+    }
+
     pub fn previous(&mut self) -> String {
         if self.selected == 0 {
             self.selected = self.last_index();
@@ -54,21 +60,23 @@ impl<'a> Choices<'a> {
     }
 
     pub fn filter(&mut self, query: &Vec<char>) -> String {
+        self.filter_choices(&query);
+        self.draw()
+    }
+
+    fn filter_choices(&mut self, query: &Vec<char>) {
         self.selected = 0;
         self.matches = self
             .choices
             .iter()
             .filter(|choice| matcher::matches(&query, &choice))
             .collect();
-
-        self.draw()
     }
 
     fn draw(&self) -> String {
         format!(
-            "{}{}\r{}\r{}{}",
+            "{}\r\n{}\r{}{}",
             cursor::save_position(),
-            cursor::down(),
             cursor::clear_screen_down(),
             self.draw_choices(),
             cursor::restore_position(),
@@ -86,23 +94,24 @@ impl<'a> Choices<'a> {
     fn draw_choices(&self) -> String {
         self.drawn_range()
             .map(|i| {
-                let choice = &self.matches[i];
-                format!("{}\n\r", choice::draw(choice, i == self.selected))
+                choice::draw(&self.matches[i], i == self.selected)
             })
             .collect::<Vec<String>>()
-            .join("")
+            .join("\n\r")
+    }
+
+    fn max_choices(&self) -> usize {
+        if self.matches.len() < self.max_choices {
+            self.matches.len()
+        } else {
+            self.max_choices
+        }
     }
 
     fn drawn_range(&self) -> std::ops::Range<usize> {
         let index = self.starting_position();
 
-        let max_choices = if self.matches.len() < self.max_choices {
-            self.matches.len()
-        } else {
-            self.max_choices
-        };
-
-        index..(index + max_choices)
+        index..(index + self.max_choices())
     }
 
     fn starting_position(&self) -> usize {
@@ -159,9 +168,8 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}{}\r{}\r{}\n\rbar\n\r{}",
+                "{}\r\n{}\r{}\n\rbar{}",
                 cursor::save_position(),
-                cursor::down(),
                 cursor::clear_screen_down(),
                 color::inverse("foo"),
                 cursor::restore_position()
@@ -179,9 +187,8 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}{}\r{}\rfoo\n\r{}\n\r{}",
+                "{}\r\n{}\rfoo\n\r{}{}",
                 cursor::save_position(),
-                cursor::down(),
                 cursor::clear_screen_down(),
                 color::inverse("bar"),
                 cursor::restore_position(),
@@ -200,9 +207,8 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}{}\r{}\r{}\n\rbar\n\r{}",
+                "{}\r\n{}\r{}\n\rbar{}",
                 cursor::save_position(),
-                cursor::down(),
                 cursor::clear_screen_down(),
                 color::inverse("foo"),
                 cursor::restore_position(),
@@ -221,9 +227,8 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}{}\r{}\r{}\n\rbar\n\r{}",
+                "{}\r\n{}\r{}\n\rbar{}",
                 cursor::save_position(),
-                cursor::down(),
                 cursor::clear_screen_down(),
                 color::inverse("foo"),
                 cursor::restore_position(),
@@ -241,9 +246,8 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}{}\r{}\rfoo\n\r{}\n\r{}",
+                "{}\r\n{}\rfoo\n\r{}{}",
                 cursor::save_position(),
-                cursor::down(),
                 cursor::clear_screen_down(),
                 color::inverse("bar"),
                 cursor::restore_position(),

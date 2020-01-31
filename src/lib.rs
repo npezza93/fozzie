@@ -30,8 +30,8 @@ impl App {
         let mut search = Search::new(config.prompt);
         let mut choices = Choices::new(config.lines, &parsed_choices);
 
+        choices.initial_draw(&mut terminal);
         terminal.print(&search.draw());
-        terminal.print(&choices.filter(&search.query));
 
         for c in terminal.keys()? {
             match c.unwrap() {
