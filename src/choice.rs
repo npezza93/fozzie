@@ -8,7 +8,7 @@ pub fn draw(choice: &str, selected: bool) -> String {
     }
 }
 
-pub fn contains(choice: &str, character: &char) -> bool {
+pub fn contains(choice: &str, character: char) -> bool {
     choice
         .chars()
         .any(|cchar| cchar.eq_ignore_ascii_case(&character))
@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn test_contains() {
-        assert!(contains("foo", &'f'));
-        assert!(!contains("foo", &'z'));
+        assert!(contains("foo", 'f'));
+        assert!(!contains("foo", 'z'));
     }
 }

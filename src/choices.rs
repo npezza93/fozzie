@@ -23,7 +23,7 @@ impl<'a> Choices<'a> {
     }
 
     pub fn initial_draw(&mut self, terminal: &mut Terminal) {
-        self.filter_choices(&vec![]);
+        self.filter_choices(&[]);
 
         terminal.print(&format!(
             "{}{}\r",
@@ -61,12 +61,12 @@ impl<'a> Choices<'a> {
         format!("\r{}", cursor::clear_screen_down())
     }
 
-    pub fn filter(&mut self, query: &Vec<char>) -> String {
+    pub fn filter(&mut self, query: &[char]) -> String {
         self.filter_choices(&query);
         self.draw()
     }
 
-    fn filter_choices(&mut self, query: &Vec<char>) {
+    fn filter_choices(&mut self, query: &[char]) {
         self.selected = 0;
         self.matches = self
             .choices
@@ -174,7 +174,7 @@ mod tests {
                 color::inverse("foo"),
                 cursor::restore_position()
             ),
-            choices.filter(&vec![])
+            choices.filter(&[])
         );
         assert_eq!(vec!["foo", "bar"], choices.matches);
     }
@@ -183,7 +183,7 @@ mod tests {
     fn test_previous_when_wrapping() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
-        choices.filter(&vec![]);
+        choices.filter(&[]);
 
         assert_eq!(
             format!(
@@ -202,7 +202,7 @@ mod tests {
     fn test_previous() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
-        choices.filter(&vec![]);
+        choices.filter(&[]);
         choices.selected = 1;
 
         assert_eq!(
@@ -222,7 +222,7 @@ mod tests {
     fn test_next_when_wrapping() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
-        choices.filter(&vec![]);
+        choices.filter(&[]);
         choices.selected = 1;
 
         assert_eq!(
@@ -242,7 +242,7 @@ mod tests {
     fn test_next() {
         let input = vec!["foo".to_string(), "bar".to_string()];
         let mut choices = Choices::new(4, &input);
-        choices.filter(&vec![]);
+        choices.filter(&[]);
 
         assert_eq!(
             format!(
