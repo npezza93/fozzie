@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn test_contains() {
-        assert!(contains("foo", 'f'));
-        assert!(!contains("foo", 'z'));
+        assert!(contains("foo", &'f'));
+        assert!(!contains("foo", &'z'));
     }
 }
