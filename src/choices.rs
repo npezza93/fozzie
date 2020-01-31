@@ -1,7 +1,7 @@
-use crate::terminal::Terminal;
 use crate::choice;
 use crate::cursor;
 use crate::matcher;
+use crate::terminal::Terminal;
 
 pub struct Choices<'a> {
     choices: &'a [String],
@@ -25,7 +25,11 @@ impl<'a> Choices<'a> {
     pub fn initial_draw(&mut self, terminal: &mut Terminal) {
         self.filter_choices(&vec![]);
 
-        terminal.print(&format!("{}{}\r", self.draw_choices(), cursor::up(self.max_choices())));
+        terminal.print(&format!(
+            "{}{}\r",
+            self.draw_choices(),
+            cursor::up(self.max_choices())
+        ));
     }
 
     pub fn previous(&mut self) -> String {
@@ -49,9 +53,7 @@ impl<'a> Choices<'a> {
     }
 
     pub fn select(&self, terminal: &mut Terminal) {
-        terminal.print(
-            &format!("\r{}", cursor::clear_screen_down())
-        );
+        terminal.print(&format!("\r{}", cursor::clear_screen_down()));
         println!("{}", self.matches[self.selected]);
     }
 
@@ -93,9 +95,7 @@ impl<'a> Choices<'a> {
 
     fn draw_choices(&self) -> String {
         self.drawn_range()
-            .map(|i| {
-                choice::draw(&self.matches[i], i == self.selected)
-            })
+            .map(|i| choice::draw(&self.matches[i], i == self.selected))
             .collect::<Vec<String>>()
             .join("\n\r")
     }

@@ -2,7 +2,7 @@ pub fn col(n: usize) -> String {
     format!("\x1B[{}G", n)
 }
 
-pub fn up(n : usize) -> String {
+pub fn up(n: usize) -> String {
     format!("\x1B[{}A", n)
 }
 
