@@ -7,11 +7,11 @@ pub struct Search {
 }
 
 impl Search {
-    pub fn new(prompt: String) -> Search {
+    pub fn new<S: Into<String>>(prompt: S) -> Search {
         Search {
             query: vec![],
             position: 0,
-            prompt,
+            prompt: prompt.into(),
         }
     }
 
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn test_draw() {
-        let search = Search::new("> ".to_string());
+        let search = Search::new("> ");
 
         assert_eq!(
             format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_keypress() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
 
         assert_eq!(
             format!("{}\r> b{}", cursor::clear_line(), cursor::col(4)),
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_backspace() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 3;
 
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_backspace_none() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 0;
 
@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_left() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
 
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_left_none() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 0;
 
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_right() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_right_none() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 3;
 
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let mut search = Search::new("> ".to_string());
+        let mut search = Search::new("> ");
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
         search.clear();
