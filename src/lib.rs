@@ -39,11 +39,11 @@ impl App {
                     choices.select(&mut terminal);
                     break;
                 }
-                Key::Char('u') => terminal.print(&search.clear()),
                 Key::Char(c) => {
                     terminal.print(&search.keypress(c));
                     terminal.print(&choices.filter(&search.query));
                 }
+                Key::Ctrl('u') => terminal.print(&search.clear()),
                 Key::Up => terminal.print(&choices.previous()),
                 Key::Down => terminal.print(&choices.next()),
                 Key::Esc | Key::Ctrl('c') => {
