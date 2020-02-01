@@ -134,6 +134,27 @@ impl Search {
 
         self.draw()
     }
+
+    pub fn delete_word(&mut self) -> String {
+        let regex = Regex::new(r"\w\b").unwrap();
+        let mut new_position = self.position;
+
+        regex
+            .find_iter(&self.query.iter().collect::<String>())
+            .for_each(|mat| {
+                if mat.start() > self.position && new_position == self.position {
+                    new_position = mat.end();
+                }
+            });
+        if self.position == new_position {
+            new_position = self.query.len();
+        }
+        (self.position..new_position).for_each(|_i| {
+            self.query.remove(self.position);
+        });
+
+        self.draw()
+    }
 }
 
 #[cfg(test)]
@@ -306,5 +327,35 @@ mod tests {
 
         assert_eq!(0, search.position);
         assert_eq!(vec![' ', 'a', 's', ' '], search.query);
+    }
+
+    #[test]
+    fn delete_word_test() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' ', 'a', 's', ' '];
+
+        search.position = 3;
+        search.delete_word();
+
+        assert_eq!(3, search.position);
+        assert_eq!(
+            vec!['a', 's', ' ', ' ', 'a', 's', ' ', 'a', 's', ' '],
+            search.query
+        );
+    }
+
+    #[test]
+    fn delete_word_at_end_test() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' ', 'a', 's', ' '];
+
+        search.position = 10;
+        search.delete_word();
+
+        assert_eq!(10, search.position);
+        assert_eq!(
+            vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' ', 'a'],
+            search.query
+        );
     }
 }

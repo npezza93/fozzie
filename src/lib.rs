@@ -39,6 +39,7 @@ impl App {
                     b'b' => terminal.print(&search.left_word()),
                     b'f' => terminal.print(&search.right_word()),
                     127 => terminal.print(&search.backspace_word()),
+                    100 => terminal.print(&search.delete_word()),
                     _ => {}
                 },
                 Key::Char('\n') => {
