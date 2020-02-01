@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn test_draw_selected() {
-        assert_eq!("\x1B[7mfoo\x1B[0m", draw("foo", true));
+        assert_eq!("\x1B[7mfoo\x1B[27m", draw("foo", true));
     }
 
     #[test]
