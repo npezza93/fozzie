@@ -105,6 +105,26 @@ impl Search {
 
         self.draw()
     }
+
+    pub fn backspace_word(&mut self) -> String {
+        let regex = Regex::new(r"\b\w").unwrap();
+        let mut new_position = self.position;
+
+        regex
+            .find_iter(&self.query.iter().collect::<String>())
+            .for_each(|mat| {
+                if mat.start() < self.position {
+                    new_position = mat.start();
+                }
+            });
+
+        (new_position..self.position).rev().for_each(|i| {
+            self.position -= 1;
+            self.query.remove(i);
+        });
+
+        self.draw()
+    }
 }
 
 #[cfg(test)]
@@ -237,5 +257,22 @@ mod tests {
         search.position = 6;
         search.right_word();
         assert_eq!(9, search.position);
+    }
+
+    #[test]
+    fn backspace_word_test() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' '];
+
+        search.position = 5;
+        search.backspace_word();
+
+        assert_eq!(3, search.position);
+        assert_eq!(vec!['a', 's', ' ', ' ', 'a', 's', ' '], search.query);
+
+        search.backspace_word();
+
+        assert_eq!(0, search.position);
+        assert_eq!(vec![' ', 'a', 's', ' '], search.query);
     }
 }
