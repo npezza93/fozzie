@@ -85,6 +85,26 @@ impl Search {
 
         self.draw()
     }
+
+    pub fn right_word(&mut self) -> String {
+        let regex = Regex::new(r"\b\w").unwrap();
+        let mut new_position = self.position;
+
+        regex
+            .find_iter(&self.query.iter().collect::<String>())
+            .for_each(|mat| {
+                if mat.start() > self.position && new_position == self.position {
+                    new_position = mat.start();
+                }
+            });
+        if self.position == new_position {
+            self.position = self.query.len();
+        } else {
+            self.position = new_position;
+        }
+
+        self.draw()
+    }
 }
 
 #[cfg(test)]
@@ -202,5 +222,20 @@ mod tests {
         search.position = 3;
         search.left_word();
         assert_eq!(0, search.position);
+    }
+
+    #[test]
+    fn test_right_word() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' '];
+
+        search.position = 0;
+        search.right_word();
+
+        assert_eq!(3, search.position);
+
+        search.position = 6;
+        search.right_word();
+        assert_eq!(9, search.position);
     }
 }

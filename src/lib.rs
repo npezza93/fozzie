@@ -37,6 +37,7 @@ impl App {
             match c.unwrap() {
                 Key::Alt(c) => match c as u8 {
                     b'b' => terminal.print(&search.left_word()),
+                    b'f' => terminal.print(&search.right_word()),
                     _ => {}
                 },
                 Key::Char('\n') => {
