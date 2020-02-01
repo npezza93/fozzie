@@ -73,6 +73,12 @@ impl App {
                         terminal.print(&choices.filter(&search.query));
                     }
                 }
+                Key::Ctrl('d') => {
+                    if let Some(text) = search.delete() {
+                        terminal.print(&text);
+                        terminal.print(&choices.filter(&search.query));
+                    }
+                }
                 _ => {}
             }
         }

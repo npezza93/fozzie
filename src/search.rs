@@ -46,6 +46,15 @@ impl Search {
         }
     }
 
+    pub fn delete(&mut self) -> Option<String> {
+        if self.position != self.query.len() {
+            self.query.remove(self.position);
+            Some(self.draw())
+        } else {
+            None
+        }
+    }
+
     pub fn left(&mut self) -> Option<&str> {
         if self.position > 0 {
             self.position -= 1;
@@ -173,6 +182,29 @@ mod tests {
 
         assert!(search.backspace().is_none());
         assert_eq!(0, search.position);
+    }
+
+    #[test]
+    fn test_delete() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 'b', 'c'];
+        search.position = 1;
+
+        assert_eq!(
+            format!("{}\r> ac{}", cursor::clear_line(), cursor::col(4)),
+            search.delete().unwrap()
+        );
+        assert_eq!(1, search.position);
+    }
+
+    #[test]
+    fn test_delete_none() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 'b', 'c'];
+        search.position = 3;
+
+        assert!(search.delete().is_none());
+        assert_eq!(3, search.position);
     }
 
     #[test]
