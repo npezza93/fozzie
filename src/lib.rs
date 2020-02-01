@@ -35,6 +35,10 @@ impl App {
 
         for c in terminal.keys()? {
             match c.unwrap() {
+                Key::Alt(c) => match c as u8 {
+                    b'b' => terminal.print(&search.left_word()),
+                    _ => {}
+                },
                 Key::Char('\n') => {
                     choices.select(&mut terminal);
                     break;

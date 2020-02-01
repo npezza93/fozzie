@@ -1,4 +1,5 @@
 use crate::cursor;
+use regex::Regex;
 
 pub struct Search {
     pub query: Vec<char>,
@@ -66,6 +67,22 @@ impl Search {
     pub fn clear(&mut self) -> String {
         self.query = vec![];
         self.position = 0;
+        self.draw()
+    }
+
+    pub fn left_word(&mut self) -> String {
+        let regex = Regex::new(r"\b\w").unwrap();
+        let mut new_position = self.position;
+
+        regex
+            .find_iter(&self.query.iter().collect::<String>())
+            .for_each(|mat| {
+                if mat.start() < self.position {
+                    new_position = mat.start();
+                }
+            });
+        self.position = new_position;
+
         self.draw()
     }
 }
@@ -169,6 +186,21 @@ mod tests {
             format!("{}\r> {}", cursor::clear_line(), cursor::col(3)),
             search.clear()
         );
+        assert_eq!(0, search.position);
+    }
+
+    #[test]
+    fn test_left_word() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' '];
+        search.position = 7;
+
+        search.left_word();
+
+        assert_eq!(6, search.position);
+
+        search.position = 3;
+        search.left_word();
         assert_eq!(0, search.position);
     }
 }
