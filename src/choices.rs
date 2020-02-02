@@ -71,7 +71,8 @@ impl<'a> Choices<'a> {
             .choices
             .iter()
             .filter_map(|choice| Match::new(&query, &choice))
-            .collect();
+            .collect::<Vec<Match<'a>>>();
+        self.matches.sort();
     }
 
     fn draw(&self) -> String {
@@ -116,7 +117,7 @@ impl<'a> Choices<'a> {
     fn starting_position(&self) -> usize {
         if self.selected + Self::OFFSET < self.max_choices {
             0
-        } else if self.selected + Self::OFFSET + 1 >= self.matches.len() && !self.matches.is_empty()
+        } else if self.selected + Self::OFFSET + 1 >= self.matches.len()
         {
             self.matches.len() - self.max_choices
         } else {

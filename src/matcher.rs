@@ -1,10 +1,11 @@
 use crate::color;
+use std::cmp::Ordering;
 use std::fmt;
 
 pub struct Match<'a> {
     pub choice: &'a str,
     highlights: Vec<usize>,
-    // score: f64,
+    score: f64,
 }
 
 impl<'a> Match<'a> {
@@ -12,10 +13,11 @@ impl<'a> Match<'a> {
         let mut matcher = Self {
             choice,
             highlights: vec![],
-            // score: 1.0,
+            score: 1.0,
         };
 
-        if matcher.matches(query, choice) {
+        if matcher.matches(query) {
+            matcher.set_score(&query);
             Some(matcher)
         } else {
             None
@@ -30,9 +32,9 @@ impl<'a> Match<'a> {
         }
     }
 
-    fn matches(&mut self, query: &[char], choice: &str) -> bool {
+    fn matches(&mut self, query: &[char]) -> bool {
         query.iter().all(|&nchar| {
-            choice.chars().enumerate().any(|(i, cchar)| {
+            self.choice.chars().enumerate().any(|(i, cchar)| {
                 if cchar.eq_ignore_ascii_case(&nchar) {
                     self.highlights.push(i);
                     true
@@ -52,11 +54,34 @@ impl<'a> Match<'a> {
             }
         }).collect()
     }
+
+    fn set_score(&mut self, _query: &[char]) {
+        self.score = 1.0;
+    }
 }
 
 impl<'a> fmt::Display for Match<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.choice)
+    }
+}
+
+impl<'a> Ord for Match<'a> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(&other).unwrap()
+    }
+}
+
+impl<'a> PartialOrd for Match<'a> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        other.score.partial_cmp(&self.score)
+    }
+}
+
+impl<'a> Eq for Match<'a> {}
+impl<'a> PartialEq for Match<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.score == other.score
     }
 }
 
