@@ -4,7 +4,7 @@ pub fn draw(choice: &str, selected: bool) -> String {
     if selected {
         color::inverse(choice)
     } else {
-        choice.to_string()
+        choice.into()
     }
 }
 
