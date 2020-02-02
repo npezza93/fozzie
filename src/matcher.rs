@@ -20,8 +20,18 @@ impl<'a> Match<'a> {
         }
     }
 
+    pub fn draw(&self, selected: bool) -> String {
+        if selected {
+            color::inverse(&self.choice)
+        } else {
+            self.choice.into()
+        }
+    }
+
     fn matches(query: &[char], choice: &str) -> bool {
-        query.is_empty() || query.iter().all(|&nchar| choice::contains(&choice, nchar))
+        query.iter().all(|&nchar| {
+            choice.chars().any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
+        })
     }
 }
 
@@ -62,5 +72,19 @@ mod tests {
         // UTF-8 case testing
         assert!(Match::new(&['a'], "A").is_some());
         assert!(Match::new(&['A'], "a").is_some());
+    }
+
+    #[test]
+    fn test_draw_not_selected() {
+        let matcher = Match::new(&[], "foo").unwrap();
+
+        assert_eq!("foo", matcher.draw(false));
+    }
+
+    #[test]
+    fn test_draw_selected() {
+        let matcher = Match::new(&[], "foo").unwrap();
+
+        assert_eq!("\x1B[7mfoo\x1B[27m", matcher.draw(true));
     }
 }

@@ -1,4 +1,3 @@
-use crate::choice;
 use crate::cursor;
 use crate::matcher::Match;
 use crate::terminal::Terminal;
@@ -95,7 +94,7 @@ impl<'a> Choices<'a> {
 
     fn draw_choices(&self) -> String {
         self.drawn_range()
-            .map(|i| choice::draw(&self.matches[i], i == self.selected))
+            .map(|i| self.matches[i].draw(i == self.selected))
             .collect::<Vec<String>>()
             .join("\n\r")
     }
