@@ -1,20 +1,22 @@
-use crate::choice;
+use crate::color;
 use std::fmt;
 
 pub struct Match<'a> {
     pub choice: &'a str,
-    score: f64,
     highlights: Vec<usize>,
+    // score: f64,
 }
 
 impl<'a> Match<'a> {
     pub fn new(query: &[char], choice: &'a str) -> Option<Self> {
-        if Self::matches(query, choice) {
-            Some(Self {
-                choice,
-                score: 1.0,
-                highlights: vec![],
-            })
+        let mut matcher = Self {
+            choice,
+            highlights: vec![],
+            // score: 1.0,
+        };
+
+        if matcher.matches(query, choice) {
+            Some(matcher)
         } else {
             None
         }
@@ -22,22 +24,33 @@ impl<'a> Match<'a> {
 
     pub fn draw(&self, selected: bool) -> String {
         if selected {
-            color::inverse(&self.choice)
+            color::inverse(&self.draw_highlights())
         } else {
-            self.choice.into()
+            self.draw_highlights()
         }
     }
 
-    fn matches(query: &[char], choice: &str) -> bool {
+    fn matches(&mut self, query: &[char], choice: &str) -> bool {
         query.iter().all(|&nchar| {
-            choice.chars().any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
+            choice.chars().enumerate().any(|(i, cchar)| {
+                if cchar.eq_ignore_ascii_case(&nchar) {
+                    self.highlights.push(i);
+                    true
+                } else {
+                    false
+                }
+            })
         })
     }
-}
 
-impl<'a> From<&Match<'a>> for String {
-    fn from(matcher: &Match<'a>) -> Self {
-        matcher.choice.to_string()
+    fn draw_highlights(&self) -> String {
+        self.choice.chars().enumerate().map(|(i, cchar)| {
+            if self.highlights.contains(&i) {
+                color::highlight(cchar)
+            } else {
+                cchar.to_string()
+            }
+        }).collect()
     }
 }
 
@@ -86,5 +99,21 @@ mod tests {
         let matcher = Match::new(&[], "foo").unwrap();
 
         assert_eq!("\x1B[7mfoo\x1B[27m", matcher.draw(true));
+    }
+
+    #[test]
+    fn test_drawing_unselected_highlights() {
+        let mut matcher = Match::new(&['f'], "foo").unwrap();
+        matcher.highlights = vec![0];
+
+        assert_eq!("\x1B[33mf\x1B[39moo", matcher.draw(false));
+    }
+
+    #[test]
+    fn test_drawing_selected_highlights() {
+        let mut matcher = Match::new(&['f'], "foo").unwrap();
+        matcher.highlights = vec![0];
+
+        assert_eq!("\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m", matcher.draw(true));
     }
 }
