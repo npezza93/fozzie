@@ -1,8 +1,8 @@
 use crate::color;
 
-pub fn draw(choice: &str, selected: bool) -> String {
+pub fn draw<S: Into<String>>(choice: S, selected: bool) -> String {
     if selected {
-        color::inverse(choice)
+        color::inverse(&choice.into())
     } else {
         choice.into()
     }

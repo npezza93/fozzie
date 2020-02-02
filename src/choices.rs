@@ -1,13 +1,13 @@
 use crate::choice;
 use crate::cursor;
-use crate::matcher;
+use crate::matcher::Match;
 use crate::terminal::Terminal;
 
 pub struct Choices<'a> {
     choices: &'a [String],
     selected: usize,
     max_choices: usize,
-    matches: Vec<&'a String>,
+    matches: Vec<Match<'a>>,
 }
 
 impl<'a> Choices<'a> {
@@ -71,7 +71,7 @@ impl<'a> Choices<'a> {
         self.matches = self
             .choices
             .iter()
-            .filter(|choice| matcher::matches(&query, &choice))
+            .filter_map(|choice| Match::new(&query, &choice))
             .collect();
     }
 
@@ -176,7 +176,14 @@ mod tests {
             ),
             choices.filter(&[])
         );
-        assert_eq!(vec!["foo", "bar"], choices.matches);
+        assert_eq!(
+            vec!["foo", "bar"],
+            choices
+                .matches
+                .iter()
+                .map(|matcher| matcher.choice)
+                .collect::<Vec<&str>>()
+        );
     }
 
     #[test]
