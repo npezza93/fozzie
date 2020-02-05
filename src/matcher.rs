@@ -1,4 +1,5 @@
 use crate::color;
+use crate::scorer;
 use std::cmp::Ordering;
 use std::fmt;
 
@@ -17,7 +18,7 @@ impl<'a> Match<'a> {
         };
 
         if matcher.matches(query) {
-            matcher.set_score(&query);
+            matcher.score = scorer::score(&query, &choice).0;
             Some(matcher)
         } else {
             None
@@ -33,8 +34,12 @@ impl<'a> Match<'a> {
     }
 
     fn matches(&mut self, query: &[char]) -> bool {
+        // Saving the enumerator outside the iterator will ensure chars are in
+        // order and will make it so we only ever go through the choice once.
+        let mut choice_chars = self.choice.chars().enumerate();
+
         query.iter().all(|&nchar| {
-            self.choice.chars().enumerate().any(|(i, cchar)| {
+            choice_chars.any(|(i, cchar)| {
                 if cchar.eq_ignore_ascii_case(&nchar) {
                     self.highlights.push(i);
                     true
@@ -46,17 +51,17 @@ impl<'a> Match<'a> {
     }
 
     fn draw_highlights(&self) -> String {
-        self.choice.chars().enumerate().map(|(i, cchar)| {
-            if self.highlights.contains(&i) {
-                color::highlight(cchar)
-            } else {
-                cchar.to_string()
-            }
-        }).collect()
-    }
-
-    fn set_score(&mut self, _query: &[char]) {
-        self.score = 1.0;
+        self.choice
+            .chars()
+            .enumerate()
+            .map(|(i, cchar)| {
+                if self.highlights.contains(&i) {
+                    color::highlight(cchar)
+                } else {
+                    cchar.to_string()
+                }
+            })
+            .collect()
     }
 }
 
@@ -102,6 +107,7 @@ mod tests {
         assert!(Match::new(&['💣', '💣', '💣'], "t💣e💣s💣t").is_some());
 
         assert!(!Match::new(&['a', 'b', 'c'], "ab").is_some());
+        assert!(!Match::new(&['a', 'b', 'c'], "cab").is_some());
         assert!(!Match::new(&['a', 'b', 'c'], "").is_some());
 
         assert!(Match::new(&[], "").is_some());

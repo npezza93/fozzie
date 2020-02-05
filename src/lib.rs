@@ -1,11 +1,13 @@
 #[macro_use]
 extern crate clap;
 
+pub mod bonus;
 pub mod choices;
 pub mod color;
 pub mod config;
 pub mod cursor;
 pub mod matcher;
+pub mod scorer;
 pub mod search;
 pub mod terminal;
 

@@ -117,8 +117,7 @@ impl<'a> Choices<'a> {
     fn starting_position(&self) -> usize {
         if self.selected + Self::OFFSET < self.max_choices {
             0
-        } else if self.selected + Self::OFFSET + 1 >= self.matches.len()
-        {
+        } else if self.selected + Self::OFFSET + 1 >= self.matches.len() {
             self.matches.len() - self.max_choices
         } else {
             self.selected + Self::OFFSET + 1 - self.max_choices
