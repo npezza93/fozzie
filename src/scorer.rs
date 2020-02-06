@@ -2,7 +2,7 @@ use std::f64::{INFINITY, NEG_INFINITY};
 use crate::bonus;
 
 const MAX: f64 = INFINITY;
-const MIN: f64 = NEG_INFINITY;
+pub const MIN: f64 = NEG_INFINITY;
 const GAP_TRAILING: f64 = -0.005;
 const GAP_INNER: f64 = -0.01;
 const GAP_LEADING:       f64 = -0.005;

@@ -29,7 +29,7 @@ impl App {
         let mut terminal = Terminal::new()?;
         let parsed_choices: Vec<String> = stdin().lock().lines().map(Result::unwrap).collect();
         let mut search = Search::new(config.prompt);
-        let mut choices = Choices::new(config.lines, &parsed_choices);
+        let mut choices = Choices::new(config.lines, &parsed_choices, config.show_scores);
 
         choices.initial_draw(&mut terminal);
         terminal.print(&search.draw());

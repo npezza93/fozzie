@@ -7,17 +7,19 @@ pub struct Choices<'a> {
     selected: usize,
     max_choices: usize,
     matches: Vec<Match<'a>>,
+    show_scores: bool,
 }
 
 impl<'a> Choices<'a> {
     const OFFSET: usize = 1;
 
-    pub fn new(max_choices: usize, choices: &'a [String]) -> Choices<'a> {
+    pub fn new(max_choices: usize, choices: &'a [String], show_scores: bool) -> Choices<'a> {
         Choices {
             selected: 0,
             matches: vec![],
             choices,
             max_choices,
+            show_scores,
         }
     }
 
@@ -95,7 +97,7 @@ impl<'a> Choices<'a> {
 
     fn draw_choices(&self) -> String {
         self.drawn_range()
-            .map(|i| self.matches[i].draw(i == self.selected))
+            .map(|i| self.matches[i].draw(i == self.selected, self.show_scores))
             .collect::<Vec<String>>()
             .join("\n\r")
     }
@@ -138,7 +140,7 @@ mod tests {
             "baz".to_string(),
             "boo".to_string(),
         ];
-        let choices = Choices::new(4, &input);
+        let choices = Choices::new(4, &input, false);
 
         let expected_choices: &[String] = &input;
 
@@ -155,7 +157,7 @@ mod tests {
             "baz".to_string(),
             "boo".to_string(),
         ];
-        let choices = Choices::new(2, &input);
+        let choices = Choices::new(2, &input, false);
 
         assert_eq!(2, choices.max_choices);
     }
@@ -163,7 +165,7 @@ mod tests {
     #[test]
     fn test_filter() {
         let input: Vec<String> = vec!["foo".to_string(), "bar".to_string()];
-        let mut choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input, false);
 
         assert_eq!(
             format!(
@@ -188,7 +190,7 @@ mod tests {
     #[test]
     fn test_previous_when_wrapping() {
         let input = vec!["foo".to_string(), "bar".to_string()];
-        let mut choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
 
         assert_eq!(
@@ -207,7 +209,7 @@ mod tests {
     #[test]
     fn test_previous() {
         let input = vec!["foo".to_string(), "bar".to_string()];
-        let mut choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
         choices.selected = 1;
 
@@ -227,7 +229,7 @@ mod tests {
     #[test]
     fn test_next_when_wrapping() {
         let input = vec!["foo".to_string(), "bar".to_string()];
-        let mut choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
         choices.selected = 1;
 
@@ -247,7 +249,7 @@ mod tests {
     #[test]
     fn test_next() {
         let input = vec!["foo".to_string(), "bar".to_string()];
-        let mut choices = Choices::new(4, &input);
+        let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
 
         assert_eq!(
@@ -266,7 +268,7 @@ mod tests {
     #[test]
     fn test_cancel() {
         let input = vec!["foo".to_string(), "bar".to_string()];
-        let choices = Choices::new(4, &input);
+        let choices = Choices::new(4, &input, false);
 
         assert_eq!(
             format!("\r{}", cursor::clear_screen_down()),

@@ -25,12 +25,21 @@ impl<'a> Match<'a> {
         }
     }
 
-    pub fn draw(&self, selected: bool) -> String {
-        if selected {
-            color::inverse(&self.draw_highlights())
-        } else {
-            self.draw_highlights()
+    pub fn draw(&self, selected: bool, show_scores: bool) -> String {
+        let mut drawn =
+            if selected {
+                color::inverse(&self.draw_highlights())
+            } else {
+                self.draw_highlights()
+            };
+
+        if show_scores && self.score != scorer::MIN {
+            drawn = format!("({:5.2}) {}", self.score, drawn);
+        } else if show_scores {
+            drawn = format!("(     ) {}", drawn);
         }
+
+        drawn
     }
 
     fn matches(&mut self, query: &[char]) -> bool {
@@ -122,14 +131,14 @@ mod tests {
     fn test_draw_not_selected() {
         let matcher = Match::new(&[], "foo").unwrap();
 
-        assert_eq!("foo", matcher.draw(false));
+        assert_eq!("foo", matcher.draw(false, false));
     }
 
     #[test]
     fn test_draw_selected() {
         let matcher = Match::new(&[], "foo").unwrap();
 
-        assert_eq!("\x1B[7mfoo\x1B[27m", matcher.draw(true));
+        assert_eq!("\x1B[7mfoo\x1B[27m", matcher.draw(true, false));
     }
 
     #[test]
@@ -137,7 +146,7 @@ mod tests {
         let mut matcher = Match::new(&['f'], "foo").unwrap();
         matcher.highlights = vec![0];
 
-        assert_eq!("\x1B[33mf\x1B[39moo", matcher.draw(false));
+        assert_eq!("\x1B[33mf\x1B[39moo", matcher.draw(false, false));
     }
 
     #[test]
@@ -145,6 +154,21 @@ mod tests {
         let mut matcher = Match::new(&['f'], "foo").unwrap();
         matcher.highlights = vec![0];
 
-        assert_eq!("\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m", matcher.draw(true));
+        assert_eq!("\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m", matcher.draw(true, false));
+    }
+
+    #[test]
+    fn drawing_with_show_scores_empty_test() {
+        let matcher = Match::new(&[], "foo").unwrap();
+
+        assert_eq!("(     ) foo", matcher.draw(false, true))
+    }
+
+    #[test]
+    fn drawing_with_show_scores_test() {
+        let mut matcher = Match::new(&['f'], "foo").unwrap();
+        matcher.highlights = vec![];
+
+        assert_eq!("( 0.89) foo", matcher.draw(false, true))
     }
 }
