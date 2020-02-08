@@ -1,12 +1,12 @@
 use crate::color;
-use crate::scorer;
+use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
 use std::fmt;
 
 pub struct Match<'a> {
     pub choice: &'a str,
     highlights: Vec<usize>,
-    score: f64,
+    scorer: Option<Score>,
 }
 
 impl<'a> Match<'a> {
@@ -14,11 +14,11 @@ impl<'a> Match<'a> {
         let mut matcher = Self {
             choice,
             highlights: vec![],
-            score: 1.0,
+            scorer: None,
         };
 
         if matcher.matches(query) {
-            matcher.score = scorer::score(&query, &choice).0;
+            matcher.scorer = Some(Score::new(&query, &choice));
             Some(matcher)
         } else {
             None
@@ -33,8 +33,9 @@ impl<'a> Match<'a> {
                 self.draw_highlights()
             };
 
-        if show_scores && self.score != scorer::MIN {
-            drawn = format!("({:5.2}) {}", self.score, drawn);
+        let current_score = self.scorer.as_ref().unwrap().score();
+        if show_scores && current_score != MIN {
+            drawn = format!("({:5.2}) {}", current_score, drawn);
         } else if show_scores {
             drawn = format!("(     ) {}", drawn);
         }
@@ -45,17 +46,10 @@ impl<'a> Match<'a> {
     fn matches(&mut self, query: &[char]) -> bool {
         // Saving the enumerator outside the iterator will ensure chars are in
         // order and will make it so we only ever go through the choice once.
-        let mut choice_chars = self.choice.chars().enumerate();
+        let mut choice_chars = self.choice.chars();
 
         query.iter().all(|&nchar| {
-            choice_chars.any(|(i, cchar)| {
-                if cchar.eq_ignore_ascii_case(&nchar) {
-                    self.highlights.push(i);
-                    true
-                } else {
-                    false
-                }
-            })
+            choice_chars.any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
         })
     }
 
@@ -88,14 +82,20 @@ impl<'a> Ord for Match<'a> {
 
 impl<'a> PartialOrd for Match<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.score.partial_cmp(&self.score)
+        let other_scorer = other.scorer.as_ref().unwrap();
+        let current_scorer = self.scorer.as_ref().unwrap();
+
+        other_scorer.score().partial_cmp(&current_scorer.score())
     }
 }
 
 impl<'a> Eq for Match<'a> {}
 impl<'a> PartialEq for Match<'a> {
     fn eq(&self, other: &Self) -> bool {
-        self.score == other.score
+        let other_scorer = other.scorer.as_ref().unwrap();
+        let current_scorer = self.scorer.as_ref().unwrap();
+
+        current_scorer.score() == other_scorer.score()
     }
 }
 
