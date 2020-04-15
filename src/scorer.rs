@@ -18,7 +18,7 @@ pub struct Score {
 }
 
 impl Score {
-    pub fn new(query: &[char], choice: &str) -> Score {
+    pub fn new(query: &str, choice: &str) -> Score {
         let mut score = Score {
             query_length: query.len(),
             choice_length: choice.chars().count(),
@@ -41,7 +41,7 @@ impl Score {
             let mut diagonal = vec![vec![0 as f64; score.choice_length]; score.query_length];
             let mut main = vec![vec![0 as f64; score.choice_length]; score.query_length];
 
-            query.iter().enumerate().for_each(|(i, qchar)| {
+            query.chars().enumerate().for_each(|(i, qchar)| {
                 let mut prev_score = MIN;
                 let gap_score = if i == score.query_length - 1 {
                     GAP_TRAILING
@@ -50,7 +50,7 @@ impl Score {
                 };
 
                 choice.chars().enumerate().for_each(|(j, cchar)| {
-                    if cchar.eq_ignore_ascii_case(qchar) {
+                    if cchar.eq_ignore_ascii_case(&qchar) {
                         let current_score = if i == 0 {
                             (j as f64 * GAP_LEADING) + bonus[j]
                         } else if j > 0 {

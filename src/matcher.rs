@@ -6,19 +6,18 @@ use std::fmt;
 pub struct Match<'a> {
     pub choice: &'a str,
     highlights: Vec<usize>,
-    scorer: Option<Score>,
+    query: String,
 }
 
 impl<'a> Match<'a> {
     pub fn new(query: &[char], choice: &'a str) -> Option<Self> {
-        let mut matcher = Self {
+        let matcher = Self {
             choice,
+            query: query.iter().collect(),
             highlights: vec![],
-            scorer: None,
         };
 
-        if matcher.matches(query) {
-            matcher.scorer = Some(Score::new(&query, &choice));
+        if matcher.is_match() {
             Some(matcher)
         } else {
             None
@@ -33,22 +32,28 @@ impl<'a> Match<'a> {
                 self.draw_highlights()
             };
 
-        let current_score = self.scorer.as_ref().unwrap().score();
-        if show_scores && current_score != MIN {
-            drawn = format!("({:5.2}) {}", current_score, drawn);
-        } else if show_scores {
-            drawn = format!("(     ) {}", drawn);
+        if show_scores {
+            let current_score = self.score();
+            if current_score != MIN {
+                drawn = format!("({:5.2}) {}", current_score, drawn);
+            } else {
+                drawn = format!("(     ) {}", drawn);
+            }
         }
 
         drawn
     }
 
-    fn matches(&mut self, query: &[char]) -> bool {
+    fn score(&self) -> f64 {
+        Score::new(&self.query, &self.choice).score()
+    }
+
+    fn is_match(&self) -> bool {
         // Saving the enumerator outside the iterator will ensure chars are in
         // order and will make it so we only ever go through the choice once.
         let mut choice_chars = self.choice.chars();
 
-        query.iter().all(|&nchar| {
+        self.query.chars().all(|nchar| {
             choice_chars.any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
         })
     }
@@ -82,20 +87,14 @@ impl<'a> Ord for Match<'a> {
 
 impl<'a> PartialOrd for Match<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let other_scorer = other.scorer.as_ref().unwrap();
-        let current_scorer = self.scorer.as_ref().unwrap();
-
-        other_scorer.score().partial_cmp(&current_scorer.score())
+        other.score().partial_cmp(&self.score())
     }
 }
 
 impl<'a> Eq for Match<'a> {}
 impl<'a> PartialEq for Match<'a> {
     fn eq(&self, other: &Self) -> bool {
-        let other_scorer = other.scorer.as_ref().unwrap();
-        let current_scorer = self.scorer.as_ref().unwrap();
-
-        current_scorer.score() == other_scorer.score()
+        other.score() == self.score()
     }
 }
 
@@ -104,7 +103,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_matches() {
+    fn test_is_match() {
         assert!(Match::new(&['a'], "a").is_some());
         assert!(Match::new(&['a'], "abc").is_some());
         assert!(Match::new(&['a', 'b', 'c'], "abc").is_some());
