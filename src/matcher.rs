@@ -33,12 +33,7 @@ impl<'a> Match<'a> {
     }
 
     pub fn draw(&self, selected: bool, show_scores: bool) -> String {
-        let mut drawn =
-            if selected {
-                color::inverse(&self.draw_highlights())
-            } else {
-                self.draw_highlights()
-            };
+        let mut drawn = self.draw_highlights();
 
         if show_scores {
             let current_score = self.score();
@@ -49,7 +44,11 @@ impl<'a> Match<'a> {
             }
         }
 
-        drawn
+        if selected {
+            color::inverse(&drawn)
+        } else {
+            drawn
+        }
     }
 
     fn score(&self) -> f64 {
