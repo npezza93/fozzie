@@ -1,7 +1,7 @@
-const SLASH: f64 = 0.9;
-const WORD: f64 = 0.8;
-const DOT: f64 = 0.6;
-const CAPITAL: f64 = 0.7;
+pub const SLASH: f64 = 0.9;
+pub const WORD: f64 = 0.8;
+pub const DOT: f64 = 0.6;
+pub const CAPITAL: f64 = 0.7;
 
 pub fn compute(choice_chars: &Vec<char>) -> Vec<f64> {
     let mut last_char = '/';

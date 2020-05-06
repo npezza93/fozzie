@@ -51,12 +51,15 @@ impl Score {
 
                 choice.chars().enumerate().for_each(|(j, cchar)| {
                     if cchar.eq_ignore_ascii_case(&qchar) {
+                        let bonus_score = bonus[j];
+
                         let current_score = if i == 0 {
-                            (j as f64 * GAP_LEADING) + bonus[j]
+                            (j as f64 * GAP_LEADING) + bonus_score
                         } else if j > 0 {
                             let m_score = main[i - 1][j - 1];
+                            let d_score = diagonal[i - 1][j - 1];
 
-                            (m_score + bonus[j]).max(m_score + MATCH_CONSECUTIVE)
+                            (m_score + bonus_score).max(d_score + MATCH_CONSECUTIVE)
                         } else {
                             MIN
                         };
@@ -127,5 +130,92 @@ impl Score {
                 positions
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prefer_starts_of_words_test() {
+        assert!(score("amor", "app/models/order") > score("amor", "app/models/zrder"));
+    }
+
+    #[test]
+    fn prefer_contiguous_over_letter_following_period_test() {
+	assert!(score("gemfil", "Gemfile.lock") < score("gemfil", "Gemfile"));
+    }
+
+    #[test]
+    fn prefer_shorter_matches_test() {
+        assert!(score("abce", "abcdef") > score("abce", "abc de"));
+        assert!(score("abc", "    a b c ") > score("abc", " a  b  c "));
+        assert!(score("abc", " a b c    ") > score("abc", " a  b  c "));
+    }
+
+    #[test]
+    fn should_prefer_shorter_candidates_test() {
+	assert!(score("test", "tests") > score("test", "testing"));
+    }
+
+    #[test]
+    fn should_prefer_start_of_candidate_test() {
+        assert!(score("test", "testing") > score("test", "/testing"));
+    }
+
+    #[test]
+    fn score_exact_match_test() {
+        assert_eq!(MAX, score("abc", "abc"));
+        assert_eq!(MAX, score("aBc", "abC"));
+    }
+
+    #[test]
+    fn score_empty_query_test() {
+        assert_eq!(MIN, score("", ""));
+        assert_eq!(MIN, score("", "a"));
+        assert_eq!(MIN, score("", "bb"));
+    }
+
+    #[test]
+    fn score_gaps_test() {
+        assert_eq!(GAP_LEADING, score("a", "*a"));
+        assert_eq!(GAP_LEADING * 2.0, score("a", "*ba"));
+        assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING, score("a", "**a*"));
+        assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING * 2.0, score("a", "**a**"));
+        assert_eq!(GAP_LEADING * 2.0 + MATCH_CONSECUTIVE + GAP_TRAILING * 2.0, score("aa", "**aa**"));
+        assert_eq!(GAP_LEADING + GAP_LEADING + GAP_INNER + GAP_TRAILING + GAP_TRAILING, score("aa", "**a*a**"));
+    }
+
+    #[test]
+    fn score_consecutive() {
+        assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE, score("aa", "*aa"));
+        assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE * 2.0, score("aaa", "*aaa"));
+        assert_eq!(GAP_LEADING + GAP_INNER + MATCH_CONSECUTIVE, score("aaa", "*a*aa"));
+    }
+
+    #[test]
+    fn score_slash() {
+        assert_eq!(GAP_LEADING + bonus::SLASH, score("a", "/a"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH, score("a", "*/a"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH + MATCH_CONSECUTIVE, score("aa", "a/aa"));
+    }
+
+    #[test]
+    fn score_capital() {
+        assert_eq!(GAP_LEADING + bonus::CAPITAL, score("a", "bA"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL, score("a", "baA"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL + MATCH_CONSECUTIVE, score("aa", "baAa"));
+    }
+
+    #[test]
+    fn score_dot() {
+        assert_eq!(GAP_LEADING + bonus::DOT, score("a", ".a"));
+        assert_eq!(GAP_LEADING * 3.0 + bonus::DOT, score("a", "*a.a"));
+        assert_eq!(GAP_LEADING + GAP_INNER + bonus::DOT, score("a", "*a.a"));
+    }
+
+    fn score(choice: &str, query: &str) -> f64 {
+        Score::new(&choice.chars().collect::<Vec<char>>(), query).score()
     }
 }
