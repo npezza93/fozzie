@@ -142,18 +142,16 @@ mod tests {
 
     #[test]
     fn test_drawing_unselected_highlights() {
-        let mut matcher = Match::new(&['f'], "foo").unwrap();
-        matcher.highlights = vec![0];
+        let matcher = Match::new(&['f'], "foo").unwrap();
 
-        assert_eq!("\x1B[33mf\x1B[39moo", matcher.draw(false, false));
+        assert_eq!("\x1B[35mf\x1B[39moo", matcher.draw(false, false));
     }
 
     #[test]
     fn test_drawing_selected_highlights() {
-        let mut matcher = Match::new(&['f'], "foo").unwrap();
-        matcher.highlights = vec![0];
+        let matcher = Match::new(&['f'], "foo").unwrap();
 
-        assert_eq!("\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m", matcher.draw(true, false));
+        assert_eq!("\x1B[7m\x1B[35mf\x1B[39moo\x1B[27m", matcher.draw(true, false));
     }
 
     #[test]
@@ -165,9 +163,8 @@ mod tests {
 
     #[test]
     fn drawing_with_show_scores_test() {
-        let mut matcher = Match::new(&['f'], "foo").unwrap();
-        matcher.highlights = vec![];
+        let matcher = Match::new(&['f'], "foo").unwrap();
 
-        assert_eq!("( 0.89) foo", matcher.draw(false, true))
+        assert_eq!("( 0.89) \u{1b}[35mf\u{1b}[39moo", matcher.draw(false, true))
     }
 }
