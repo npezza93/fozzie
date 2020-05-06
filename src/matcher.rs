@@ -5,20 +5,28 @@ use std::fmt;
 
 pub struct Match<'a> {
     pub choice: &'a str,
-    highlights: Vec<usize>,
     query: String,
+    scorer: Score,
 }
 
 impl<'a> Match<'a> {
-    pub fn new(query: &[char], choice: &'a str) -> Option<Self> {
-        let matcher = Self {
-            choice,
-            query: query.iter().collect(),
-            highlights: vec![],
-        };
+    fn is_match(query: &[char], choice: &str) -> bool {
+        // Saving the enumerator outside the iterator will ensure chars are in
+        // order and will make it so we only ever go through the choice once.
+        let mut choice_chars = choice.chars();
 
-        if matcher.is_match() {
-            Some(matcher)
+        query.iter().all(|nchar| {
+            choice_chars.any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
+        })
+    }
+
+    pub fn new(query: &[char], choice: &'a str) -> Option<Self> {
+        if Self::is_match(&query, &choice) {
+            Some(Self {
+                choice,
+                query: query.iter().collect(),
+                scorer: Score::new(&query, &choice),
+            })
         } else {
             None
         }
@@ -45,17 +53,11 @@ impl<'a> Match<'a> {
     }
 
     fn score(&self) -> f64 {
-        Score::new(&self.query, &self.choice).score()
+        self.scorer.score()
     }
 
-    fn is_match(&self) -> bool {
-        // Saving the enumerator outside the iterator will ensure chars are in
-        // order and will make it so we only ever go through the choice once.
-        let mut choice_chars = self.choice.chars();
-
-        self.query.chars().all(|nchar| {
-            choice_chars.any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
-        })
+    fn positions(&self) -> Vec<usize> {
+        self.scorer.positions()
     }
 
     fn draw_highlights(&self) -> String {
@@ -63,7 +65,7 @@ impl<'a> Match<'a> {
             .chars()
             .enumerate()
             .map(|(i, cchar)| {
-                if self.highlights.contains(&i) {
+                if self.positions().contains(&i) {
                     color::highlight(cchar)
                 } else {
                     cchar.to_string()

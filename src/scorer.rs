@@ -18,7 +18,7 @@ pub struct Score {
 }
 
 impl Score {
-    pub fn new(query: &str, choice: &str) -> Score {
+    pub fn new(query: &[char], choice: &str) -> Score {
         let mut score = Score {
             query_length: query.len(),
             choice_length: choice.chars().count(),
@@ -41,7 +41,7 @@ impl Score {
             let mut diagonal = vec![vec![0 as f64; score.choice_length]; score.query_length];
             let mut main = vec![vec![0 as f64; score.choice_length]; score.query_length];
 
-            query.chars().enumerate().for_each(|(i, qchar)| {
+            query.iter().enumerate().for_each(|(i, qchar)| {
                 let mut prev_score = MIN;
                 let gap_score = if i == score.query_length - 1 {
                     GAP_TRAILING
@@ -66,7 +66,7 @@ impl Score {
                         diagonal[i][j] = current_score;
                         main[i][j] = prev_score;
                     } else {
-                        prev_score = prev_score + gap_score;
+                        prev_score += gap_score;
 
                         diagonal[i][j] = MIN;
                         main[i][j] = prev_score;
@@ -83,7 +83,49 @@ impl Score {
     pub fn score(&self) -> f64 {
         match self.score {
             Some(score) => score,
-            None => self.main.as_ref().unwrap()[self.query_length - 1][self.choice_length - 1]
+            None => {
+                match &self.main {
+                    Some(main) => main[self.query_length - 1][self.choice_length - 1],
+                    None => MIN,
+                }
+            }
+        }
+    }
+
+    pub fn positions(&self) -> Vec<usize> {
+        match &self.positions {
+            Some(positions) => positions.to_vec(),
+            None => {
+                let mut positions = vec![0 as usize; self.query_length];
+
+                let mut match_required = false;
+                let mut j = self.choice_length - 1;
+                let diagonal = self.diagonal.as_ref().unwrap();
+                let main = self.main.as_ref().unwrap();
+
+                for i in (0..self.query_length).rev() {
+                    while j > (0 as usize) {
+                        let last = if i > 0 && j > 0 { diagonal[i - 1][j - 1] } else { 0.0 };
+
+                        let d = diagonal[i][j];
+                        let m = main[i][j];
+
+                        if d != MIN && (match_required || d == m) {
+                            if i > 0 && j > 0 && m == last + MATCH_CONSECUTIVE {
+                                match_required = true;
+                            }
+
+                            positions[i] = j;
+
+                            break;
+                        }
+
+                        j -= 1
+                    }
+                }
+
+                positions
+            }
         }
     }
 }
