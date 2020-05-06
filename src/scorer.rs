@@ -188,34 +188,93 @@ mod tests {
     }
 
     #[test]
-    fn score_consecutive() {
+    fn score_consecutive_test() {
         assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE, score("aa", "*aa"));
         assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE * 2.0, score("aaa", "*aaa"));
         assert_eq!(GAP_LEADING + GAP_INNER + MATCH_CONSECUTIVE, score("aaa", "*a*aa"));
     }
 
     #[test]
-    fn score_slash() {
+    fn score_slash_test() {
         assert_eq!(GAP_LEADING + bonus::SLASH, score("a", "/a"));
         assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH, score("a", "*/a"));
         assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH + MATCH_CONSECUTIVE, score("aa", "a/aa"));
     }
 
     #[test]
-    fn score_capital() {
+    fn score_capital_test() {
         assert_eq!(GAP_LEADING + bonus::CAPITAL, score("a", "bA"));
         assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL, score("a", "baA"));
         assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL + MATCH_CONSECUTIVE, score("aa", "baAa"));
     }
 
     #[test]
-    fn score_dot() {
+    fn score_dot_test() {
         assert_eq!(GAP_LEADING + bonus::DOT, score("a", ".a"));
         assert_eq!(GAP_LEADING * 3.0 + bonus::DOT, score("a", "*a.a"));
         assert_eq!(GAP_LEADING + GAP_INNER + bonus::DOT, score("a", "*a.a"));
     }
 
+    #[test]
+    fn positions_consecutive_test() {
+        let positions = positions("amo", "app/models/foo");
+
+        assert_eq!(0, positions[0]);
+        assert_eq!(4, positions[1]);
+        assert_eq!(5, positions[2]);
+        assert_eq!(3, positions.len());
+    }
+
+    #[test]
+    fn positions_start_of_word_test() {
+	let positions = positions("amor", "app/models/order");
+
+	assert_eq!(0, positions[0]);
+	assert_eq!(4, positions[1]);
+	assert_eq!(11, positions[2]);
+	assert_eq!(12, positions[3]);
+        assert_eq!(4, positions.len());
+    }
+
+    #[test]
+    fn positions_no_bonuses_test() {
+	let places = positions("as", "tags");
+
+	assert_eq!(1, places[0]);
+	assert_eq!(3, places[1]);
+	assert_eq!(2, places.len());
+
+	let places = positions("as", "examples.txt");
+	assert_eq!(2, places[0]);
+	assert_eq!(7, places[1]);
+        assert_eq!(2, places.len());
+    }
+
+    #[test]
+    fn positions_multiple_candidates_start_of_words_test() {
+	let positions = positions("abc", "a/a/b/c/c");
+
+	assert_eq!(2, positions[0]);
+	assert_eq!(4, positions[1]);
+	assert_eq!(6, positions[2]);
+        assert_eq!(3, positions.len());
+    }
+
+    #[test]
+    fn positions_exact_match_test() {
+	let positions = positions("foo", "foo");
+
+	assert_eq!(0, positions[0]);
+	assert_eq!(1, positions[1]);
+	assert_eq!(2, positions[2]);
+        assert_eq!(3, positions.len());
+    }
+
     fn score(choice: &str, query: &str) -> f64 {
         Score::new(&choice.chars().collect::<Vec<char>>(), query).score()
+    }
+
+    fn positions(choice: &str, query: &str) -> Vec<usize> {
+        Score::new(&choice.chars().collect::<Vec<char>>(), query).positions()
     }
 }
