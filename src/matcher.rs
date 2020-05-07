@@ -10,7 +10,7 @@ pub struct Match<'a> {
 }
 
 impl<'a> Match<'a> {
-    fn is_match(query: &[char], choice: &str) -> bool {
+    pub fn is_match(query: &[char], choice: &str) -> bool {
         // Saving the enumerator outside the iterator will ensure chars are in
         // order and will make it so we only ever go through the choice once.
         let mut choice_chars = choice.chars();
