@@ -1,5 +1,6 @@
 use std::f64::{INFINITY, NEG_INFINITY};
 use crate::bonus;
+use float_cmp::approx_eq;
 
 const MAX: f64 = INFINITY;
 pub const MIN: f64 = NEG_INFINITY;
@@ -113,8 +114,8 @@ impl Score {
                         let d = diagonal[i][j];
                         let m = main[i][j];
 
-                        if d != MIN && (match_required || d == m) {
-                            if i > 0 && j > 0 && m == last + MATCH_CONSECUTIVE {
+                        if d != MIN && (match_required || approx_eq!(f64, m, d)) {
+                            if i > 0 && j > 0 && approx_eq!(f64, m, last + MATCH_CONSECUTIVE) {
                                 match_required = true;
                             }
 
