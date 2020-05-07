@@ -5,7 +5,6 @@ use std::fmt;
 
 pub struct Match<'a> {
     pub choice: &'a str,
-    query: String,
     scorer: Score,
 }
 
@@ -24,7 +23,6 @@ impl<'a> Match<'a> {
         if Self::is_match(&query, &choice) {
             Some(Self {
                 choice,
-                query: query.iter().collect(),
                 scorer: Score::new(&query, &choice),
             })
         } else {
