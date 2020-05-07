@@ -53,8 +53,8 @@ impl App {
                     terminal.print(&choices.filter(&search.query));
                 }
                 Event::Key(Key::Ctrl('u')) => terminal.print(&search.clear()),
-                Event::Key(Key::Up) => terminal.print(&choices.previous()),
-                Event::Key(Key::Down) => terminal.print(&choices.next()),
+                Event::Key(Key::Up) => terminal.print(&choices.previous(false)),
+                Event::Key(Key::Down) => terminal.print(&choices.next(false)),
                 Event::Key(Key::Esc) | Event::Key(Key::Ctrl('c')) => {
                     exit_code = 1;
                     terminal.print(&choices.cancel());
@@ -86,8 +86,12 @@ impl App {
                     match str::from_utf8(&buf) {
                         Ok(buffer) => {
                             match buffer {
-                                "\u{1b}[1;2A" => println!("up"),
-                                "\u{1b}[1;2B" => println!("down"),
+                                "\u{1b}[1;2A" => {
+                                    terminal.print(&choices.previous(true));
+                                },
+                                "\u{1b}[1;2B" => {
+                                    terminal.print(&choices.next(true));
+                                },
                                 _ => {}
                             }
                         },

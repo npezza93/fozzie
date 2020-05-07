@@ -4,7 +4,8 @@ use crate::terminal::Terminal;
 
 pub struct Choices<'a> {
     choices: &'a [String],
-    selected: usize,
+    start_selected: usize,
+    end_selected: usize,
     max_choices: usize,
     matches: Vec<Match<'a>>,
     show_scores: bool,
@@ -15,7 +16,8 @@ impl<'a> Choices<'a> {
 
     pub fn new(max_choices: usize, choices: &'a [String], show_scores: bool) -> Choices<'a> {
         Choices {
-            selected: 0,
+            start_selected: 0,
+            end_selected: 0,
             matches: vec![],
             choices,
             max_choices,
@@ -33,21 +35,29 @@ impl<'a> Choices<'a> {
         ));
     }
 
-    pub fn previous(&mut self) -> String {
-        if self.selected == 0 {
-            self.selected = self.last_index();
+    pub fn previous(&mut self, multiple: bool) -> String {
+        if self.start_selected == 0 {
+            self.start_selected = self.last_index();
+            self.end_selected = self.last_index();
         } else {
-            self.selected -= 1;
+            self.end_selected -= 1;
+            if !multiple {
+                self.start_selected -= 1;
+            }
         }
 
         self.draw()
     }
 
-    pub fn next(&mut self) -> String {
-        if self.selected == self.last_index() {
-            self.selected = 0;
+    pub fn next(&mut self, multiple: bool) -> String {
+        if self.start_selected == self.last_index() {
+            self.start_selected = 0;
+            self.end_selected = 0;
         } else {
-            self.selected += 1;
+            self.end_selected += 1;
+            if !multiple {
+                self.start_selected += 1;
+            }
         }
 
         self.draw()
@@ -55,7 +65,7 @@ impl<'a> Choices<'a> {
 
     pub fn select(&self, terminal: &mut Terminal) {
         terminal.print(&format!("\r{}", cursor::clear_screen_down()));
-        println!("{}", self.matches[self.selected]);
+        println!("{}", self.matches[self.start_selected]);
     }
 
     pub fn cancel(&self) -> String {
@@ -68,7 +78,8 @@ impl<'a> Choices<'a> {
     }
 
     fn filter_choices(&mut self, query: &[char]) {
-        self.selected = 0;
+        self.start_selected = 0;
+        self.end_selected = 0;
         self.matches = self
             .choices
             .iter()
@@ -97,7 +108,7 @@ impl<'a> Choices<'a> {
 
     fn draw_choices(&self) -> String {
         self.drawn_range()
-            .map(|i| self.matches[i].draw(i == self.selected, self.show_scores))
+            .map(|i| self.matches[i].draw((self.start_selected..=self.end_selected).contains(&i), self.show_scores))
             .collect::<Vec<String>>()
             .join("\n\r")
     }
@@ -117,12 +128,12 @@ impl<'a> Choices<'a> {
     }
 
     fn starting_position(&self) -> usize {
-        if self.selected + Self::OFFSET < self.max_choices {
+        if self.start_selected + Self::OFFSET < self.max_choices {
             0
-        } else if self.selected + Self::OFFSET + 1 >= self.matches.len() {
+        } else if self.start_selected + Self::OFFSET + 1 >= self.matches.len() {
             self.matches.len() - self.max_choices
         } else {
-            self.selected + Self::OFFSET + 1 - self.max_choices
+            self.start_selected + Self::OFFSET + 1 - self.max_choices
         }
     }
 }
