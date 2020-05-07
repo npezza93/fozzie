@@ -1,5 +1,5 @@
 pub const SLASH: f64 = 0.9;
-pub const WORD: f64 = 0.8;
+pub const WORD: f64 = 1.0;
 pub const DOT: f64 = 0.6;
 pub const CAPITAL: f64 = 0.7;
 

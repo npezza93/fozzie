@@ -178,6 +178,11 @@ mod tests {
     }
 
     #[test]
+    fn score_words_higher_test() {
+        assert!(score("orderitem", "order_item.rb") > score("orderitem", "OrderItemsWizard.js"));
+    }
+
+    #[test]
     fn score_gaps_test() {
         assert_eq!(GAP_LEADING, score("a", "*a"));
         assert_eq!(GAP_LEADING * 2.0, score("a", "*ba"));
