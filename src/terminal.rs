@@ -20,8 +20,8 @@ impl Terminal {
 
     pub fn keys(
         &mut self,
-    ) -> Result<termion::input::Keys<raw_tty::RawReader<File>>, Box<dyn Error>> {
-        Ok(self.output.try_clone()?.into_raw_mode()?.keys())
+    ) -> Result<termion::input::Events<raw_tty::RawReader<File>>, Box<dyn Error>> {
+        Ok(self.output.try_clone()?.into_raw_mode()?.events())
     }
 
     pub fn print(&mut self, text: &str) {

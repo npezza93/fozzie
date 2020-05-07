@@ -16,8 +16,9 @@ use config::Config;
 use search::Search;
 use std::error::Error;
 use std::io::{stdin, BufRead};
+use std::str;
 use terminal::Terminal;
-use termion::event::Key;
+use termion::event::{*, Key};
 
 pub struct App {}
 
@@ -36,49 +37,61 @@ impl App {
 
         for c in terminal.keys()? {
             match c.unwrap() {
-                Key::Alt(c) => match c as u8 {
+                Event::Key(Key::Alt(c)) => match c as u8 {
                     b'b' => terminal.print(&search.left_word()),
                     b'f' => terminal.print(&search.right_word()),
                     127 => terminal.print(&search.backspace_word()),
                     100 => terminal.print(&search.delete_word()),
                     _ => {}
                 },
-                Key::Char('\n') => {
+                Event::Key(Key::Char('\n')) => {
                     choices.select(&mut terminal);
                     break;
                 }
-                Key::Char(c) => {
+                Event::Key(Key::Char(c)) => {
                     terminal.print(&search.keypress(c));
                     terminal.print(&choices.filter(&search.query));
                 }
-                Key::Ctrl('u') => terminal.print(&search.clear()),
-                Key::Up => terminal.print(&choices.previous()),
-                Key::Down => terminal.print(&choices.next()),
-                Key::Esc | Key::Ctrl('c') => {
+                Event::Key(Key::Ctrl('u')) => terminal.print(&search.clear()),
+                Event::Key(Key::Up) => terminal.print(&choices.previous()),
+                Event::Key(Key::Down) => terminal.print(&choices.next()),
+                Event::Key(Key::Esc) | Event::Key(Key::Ctrl('c')) => {
                     exit_code = 1;
                     terminal.print(&choices.cancel());
                     break;
                 }
-                Key::Left => {
+                Event::Key(Key::Left) => {
                     if let Some(text) = search.left() {
                         terminal.print(text);
                     }
                 }
-                Key::Right => {
+                Event::Key(Key::Right) => {
                     if let Some(text) = search.right() {
                         terminal.print(text);
                     }
                 }
-                Key::Backspace => {
+                Event::Key(Key::Backspace) => {
                     if let Some(text) = search.backspace() {
                         terminal.print(&text);
                         terminal.print(&choices.filter(&search.query));
                     }
                 }
-                Key::Ctrl('d') => {
+                Event::Key(Key::Ctrl('d')) => {
                     if let Some(text) = search.delete() {
                         terminal.print(&text);
                         terminal.print(&choices.filter(&search.query));
+                    }
+                }
+                Event::Unsupported(buf) => {
+                    match str::from_utf8(&buf) {
+                        Ok(buffer) => {
+                            match buffer {
+                                "\u{1b}[1;2A" => println!("up"),
+                                "\u{1b}[1;2B" => println!("down"),
+                                _ => {}
+                            }
+                        },
+                        Err(_) => {}
                     }
                 }
                 _ => {}
