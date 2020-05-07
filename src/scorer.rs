@@ -38,7 +38,7 @@ impl Score {
             score.score = Some(MAX);
             score.positions = Some((0..score.query_length).collect());
         } else {
-            let bonus = bonus::compute(&choice.chars().collect());
+            let bonus = bonus::compute(&choice.chars().collect::<Vec<char>>());
             let mut diagonal = vec![vec![0 as f64; score.choice_length]; score.query_length];
             let mut main = vec![vec![0 as f64; score.choice_length]; score.query_length];
 
