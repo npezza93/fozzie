@@ -60,11 +60,13 @@ impl<'a> Match<'a> {
     }
 
     fn draw_highlights(&self) -> String {
+        let positions = self.positions();
+
         self.choice
             .chars()
             .enumerate()
             .map(|(i, cchar)| {
-                if self.positions().contains(&i) {
+                if positions.contains(&i) {
                     color::highlight(cchar)
                 } else {
                     cchar.to_string()
