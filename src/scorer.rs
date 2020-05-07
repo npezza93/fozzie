@@ -109,22 +109,18 @@ impl Score {
 
                 for i in (0..self.query_length).rev() {
                     while j > (0 as usize) {
-                        let last = if i > 0 && j > 0 { diagonal[i - 1][j - 1] } else { 0.0 };
-
                         let d = diagonal[i][j];
                         let m = main[i][j];
 
-                        if d != MIN && (match_required || approx_eq!(f64, m, d)) {
-                            if i > 0 && j > 0 && approx_eq!(f64, m, last + MATCH_CONSECUTIVE) {
-                                match_required = true;
-                            }
-
+                        if d != MIN && (match_required || approx_eq!(f64, d, m)) {
+                            // If this score was determined using
+                            // SCORE_MATCH_CONSECUTIVE, the
+                            // previous character MUST be a match
+                            match_required = i > 0 && j > 0 && approx_eq!(f64, m, diagonal[i - 1][j - 1] + MATCH_CONSECUTIVE);
                             positions[i] = j;
-
                             break;
                         }
-
-                        j -= 1
+                        j -=1;
                     }
                 }
 
@@ -274,6 +270,17 @@ mod tests {
 	assert_eq!(1, positions[1]);
 	assert_eq!(2, positions[2]);
         assert_eq!(3, positions.len());
+    }
+
+    #[test]
+    fn positions_test() {
+	let positions = positions("code", "CODE_OF_CONDUCT.md");
+
+	assert_eq!(0, positions[0]);
+	assert_eq!(1, positions[1]);
+	assert_eq!(2, positions[2]);
+	assert_eq!(3, positions[3]);
+        assert_eq!(4, positions.len());
     }
 
     fn score(choice: &str, query: &str) -> f64 {
