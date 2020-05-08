@@ -1,5 +1,6 @@
 use std::f32::{INFINITY, NEG_INFINITY};
 use crate::bonus;
+use crate::matrix::Matrix;
 use float_cmp::approx_eq;
 
 const MAX: f32 = INFINITY;
@@ -14,7 +15,7 @@ pub struct Score {
     pub positions: Vec<usize>,
 }
 
-fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f32>>, diagonal: Vec<Vec<f32>>) -> Vec<usize> {
+fn positions(choice_length: usize, query_length: usize, main: Matrix, diagonal: Matrix) -> Vec<usize> {
     let mut positions = vec![0 as usize; query_length];
 
     let mut match_required = false;
@@ -22,14 +23,13 @@ fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f32>>, dia
 
     for i in (0..query_length).rev() {
         while j > (0 as usize) {
-            let d = diagonal[i][j];
-            let m = main[i][j];
+            let d = diagonal[(i, j)];
+            let m = main[(i, j)];
 
             if d != MIN && (match_required || approx_eq!(f32, d, m)) {
                 // If this score was determined using
-                // SCORE_MATCH_CONSECUTIVE, the
-                // previous character MUST be a match
-                match_required = i > 0 && j > 0 && approx_eq!(f32, m, diagonal[i - 1][j - 1] + MATCH_CONSECUTIVE);
+                // MATCH_CONSECUTIVE, the previous character MUST be a match
+                match_required = i > 0 && j > 0 && approx_eq!(f32, m, diagonal[(i - 1, j - 1)] + MATCH_CONSECUTIVE);
                 positions[i] = j;
                 break;
             }
@@ -40,12 +40,14 @@ fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f32>>, dia
     positions
 }
 
-fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usize) -> (Vec<Vec<f32>>, Vec<Vec<f32>>){
+fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usize) -> (Matrix, Matrix){
     let bonus = bonus::compute(&choice.chars().collect::<Vec<char>>());
-    let mut diagonal = vec![vec![0 as f32; choice_length]; query_length];
-    let mut main = vec![vec![0 as f32; choice_length]; query_length];
+    let lower_query: Vec<char> = query.iter().map(|qchar| qchar.to_ascii_lowercase()).collect();
+    let lower_choice: Vec<char> = choice.chars().map(|cchar| cchar.to_ascii_lowercase()).collect();
+    let mut diagonal = Matrix::new(query_length, choice_length);
+    let mut main = Matrix::new(query_length, choice_length);
 
-    query.iter().enumerate().for_each(|(i, qchar)| {
+    lower_query.iter().enumerate().for_each(|(i, qchar)| {
         let mut prev_score = MIN;
         let gap_score = if i == query_length - 1 {
             GAP_TRAILING
@@ -53,15 +55,15 @@ fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usi
             GAP_INNER
         };
 
-        choice.chars().enumerate().for_each(|(j, cchar)| {
-            if cchar.eq_ignore_ascii_case(&qchar) {
+        lower_choice.iter().enumerate().for_each(|(j, cchar)| {
+            if qchar == cchar {
                 let bonus_score = bonus[j];
 
                 let current_score = if i == 0 {
                     (j as f32 * GAP_LEADING) + bonus_score
                 } else if j > 0 {
-                    let m_score = main[i - 1][j - 1];
-                    let d_score = diagonal[i - 1][j - 1];
+                    let m_score = main[(i - 1, j - 1)];
+                    let d_score = diagonal[(i - 1, j - 1)];
 
                     (m_score + bonus_score).max(d_score + MATCH_CONSECUTIVE)
                 } else {
@@ -70,13 +72,13 @@ fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usi
 
                 prev_score = current_score.max(prev_score + gap_score);
 
-                diagonal[i][j] = current_score;
-                main[i][j] = prev_score;
+                diagonal[(i, j)] = current_score;
+                main[(i, j)] = prev_score;
             } else {
                 prev_score += gap_score;
 
-                diagonal[i][j] = MIN;
-                main[i][j] = prev_score;
+                diagonal[(i, j)] = MIN;
+                main[(i, j)] = prev_score;
             }
         });
     });
@@ -99,7 +101,7 @@ impl Score {
             let (main, diagonal) = compute(&query, &choice, query_length, choice_length);
 
             Score {
-                score: main[query_length - 1][choice_length - 1],
+                score: main[(query_length - 1, choice_length - 1)],
                 positions: positions(choice_length, query_length, main, diagonal)
             }
         }

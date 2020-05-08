@@ -9,6 +9,7 @@ pub mod color;
 pub mod config;
 pub mod cursor;
 pub mod matcher;
+pub mod matrix;
 pub mod scorer;
 pub mod search;
 pub mod terminal;
