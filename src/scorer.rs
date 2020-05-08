@@ -33,7 +33,7 @@ fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f64>>, dia
                 positions[i] = j;
                 break;
             }
-            j -=1;
+            j -= 1;
         }
     }
 
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn score_words_higher_test() {
-        assert!(score("orderitem", "order_item.rb") > score("orderitem", "OrderItemsWizard.js"));
+        assert!(score("orderitem", "app/models/o2/order_item.rb") > score("orderitem", "app/frontend/src/javascript/controllers/OrderItemsWizard.js"));
     }
 
     #[test]
