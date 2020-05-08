@@ -35,7 +35,13 @@ impl App {
         let mut choices = Choices::new(config.lines, &parsed_choices, config.show_scores);
 
         choices.initial_draw(&mut terminal);
-        terminal.print(&search.draw());
+        match config.query {
+            Some(query) => {
+                terminal.print(&search.set_query(&query));
+                terminal.print(&choices.filter(&search.query));
+            }
+            None => terminal.print(&search.draw())
+        }
 
         for c in terminal.keys()? {
             match c.unwrap() {
