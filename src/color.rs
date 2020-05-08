@@ -3,8 +3,7 @@ pub fn inverse(text: &str) -> String {
 }
 
 pub fn highlight(c: char) -> String {
-    // format!("\x1B[33m{}\x1B[39m", c)
-    format!("\x1B[35m{}\x1B[39m", c)
+    format!("\x1B[33m{}\x1B[39m", c)
 }
 
 #[cfg(test)]
@@ -18,7 +17,6 @@ mod tests {
 
     #[test]
     fn test_highlight() {
-        // assert_eq!("\x1B[33mf\x1B[39m", highlight('f'));
-        assert_eq!("\x1B[35mf\x1B[39m", highlight('f'));
+        assert_eq!("\x1B[33mf\x1B[39m", highlight('f'));
     }
 }
