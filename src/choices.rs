@@ -29,7 +29,7 @@ impl<'a> Choices<'a> {
         self.filter_choices(&[]);
 
         terminal.print(&format!(
-            "{}{}\r",
+            "\r\n{}{}\r",
             self.draw_choices(),
             cursor::up(self.max_choices())
         ));
