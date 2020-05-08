@@ -19,21 +19,23 @@ fn positions(choice_length: usize, query_length: usize, main: Matrix, diagonal: 
     let mut positions = vec![0 as usize; query_length];
 
     let mut match_required = false;
-    let mut j = choice_length - 1;
+    let mut choice_index = choice_length - 1;
 
-    for i in (0..query_length).rev() {
-        while j > (0 as usize) {
-            let d = diagonal[(i, j)];
-            let m = main[(i, j)];
+    for query_index in (0..query_length).rev() {
+        while choice_index > (0 as usize) {
+            let d = diagonal[(query_index, choice_index)];
+            let m = main[(query_index, choice_index)];
 
             if d != MIN && (match_required || approx_eq!(f32, d, m)) {
                 // If this score was determined using
                 // MATCH_CONSECUTIVE, the previous character MUST be a match
-                match_required = i > 0 && j > 0 && approx_eq!(f32, m, diagonal[(i - 1, j - 1)] + MATCH_CONSECUTIVE);
-                positions[i] = j;
+                match_required = query_index > 0 && choice_index > 0 &&
+                    approx_eq!(f32, m, diagonal[(query_index - 1, choice_index - 1)] + MATCH_CONSECUTIVE);
+                positions[query_index] = choice_index;
+                choice_index -= 1;
                 break;
             }
-            j -= 1;
+            choice_index -= 1;
         }
     }
 
@@ -259,6 +261,18 @@ mod tests {
 	assert_eq!(2, positions[2]);
 	assert_eq!(3, positions[3]);
         assert_eq!(4, positions.len());
+    }
+
+    #[test]
+    fn class_positions_test() {
+	let positions = positions("class", "class_");
+
+	assert_eq!(0, positions[0]);
+	assert_eq!(1, positions[1]);
+	assert_eq!(2, positions[2]);
+	assert_eq!(3, positions[3]);
+	assert_eq!(4, positions[4]);
+        assert_eq!(5, positions.len());
     }
 
     #[bench]
