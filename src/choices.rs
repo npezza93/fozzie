@@ -57,7 +57,11 @@ impl<'a> Choices<'a> {
 
     pub fn select(&self, terminal: &mut Terminal) {
         terminal.print(&format!("\r{}", cursor::clear_screen_down()));
-        println!("{}", self.matches[self.selected]);
+        println!("{}", self.current_match());
+    }
+
+    pub fn current_match(&self) -> &str {
+        &self.matches[self.selected].choice
     }
 
     pub fn cancel(&self) -> String {
@@ -276,6 +280,15 @@ mod tests {
             format!("\r{}", cursor::clear_screen_down()),
             choices.cancel()
         );
+    }
+
+    #[test]
+    fn test_current_match() {
+        let input = vec!["foo".to_string(), "bar".to_string()];
+        let mut choices = Choices::new(4, &input, false);
+        choices.filter(&[]);
+
+        assert_eq!("foo", choices.current_match());
     }
 
     #[bench]

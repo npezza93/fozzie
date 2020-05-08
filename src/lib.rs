@@ -50,6 +50,10 @@ impl App {
                     choices.select(&mut terminal);
                     break;
                 }
+                Key::Char('\t') => {
+                    terminal.print(&search.set_query(&choices.current_match()));
+                    terminal.print(&choices.filter(&search.query));
+                }
                 Key::Char(c) => {
                     terminal.print(&search.keypress(c));
                     terminal.print(&choices.filter(&search.query));

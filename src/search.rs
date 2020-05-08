@@ -155,6 +155,13 @@ impl Search {
 
         self.draw()
     }
+
+    pub fn set_query(&mut self, new_query: &str) -> String {
+        self.query = new_query.chars().collect::<Vec<char>>();
+        self.position = new_query.len();
+
+        self.draw()
+    }
 }
 
 #[cfg(test)]
@@ -357,5 +364,17 @@ mod tests {
             vec!['a', 's', ' ', 'a', 's', ' ', 'a', 's', ' ', 'a'],
             search.query
         );
+    }
+
+    #[test]
+    fn set_query_test() {
+        let mut search = Search::new("> ");
+        search.query = vec!['a'];
+
+        search.position = 1;
+        search.set_query("foo");
+
+        assert_eq!(3, search.position);
+        assert_eq!(vec!['f', 'o', 'o'], search.query);
     }
 }
