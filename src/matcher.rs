@@ -50,21 +50,15 @@ impl<'a> Match<'a> {
     }
 
     fn score(&self) -> f64 {
-        self.scorer.score()
-    }
-
-    fn positions(&self) -> Vec<usize> {
-        self.scorer.positions()
+        self.scorer.score
     }
 
     fn draw_highlights(&self) -> String {
-        let positions = self.positions();
-
         self.choice
             .chars()
             .enumerate()
             .map(|(i, cchar)| {
-                if positions.contains(&i) {
+                if self.scorer.positions.contains(&i) {
                     color::highlight(cchar)
                 } else {
                     cchar.to_string()

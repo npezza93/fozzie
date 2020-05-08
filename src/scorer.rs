@@ -10,121 +10,97 @@ const GAP_LEADING:       f64 = -0.005;
 const MATCH_CONSECUTIVE: f64 = 1.0;
 
 pub struct Score {
-    query_length: usize,
-    choice_length: usize,
-    main: Option<Vec<Vec<f64>>>,
-    diagonal: Option<Vec<Vec<f64>>>,
-    score: Option<f64>,
-    positions: Option<Vec<usize>>,
+    pub score: f64,
+    pub positions: Vec<usize>,
+}
+
+fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f64>>, diagonal: Vec<Vec<f64>>) -> Vec<usize> {
+    let mut positions = vec![0 as usize; query_length];
+
+    let mut match_required = false;
+    let mut j = choice_length - 1;
+
+    for i in (0..query_length).rev() {
+        while j > (0 as usize) {
+            let d = diagonal[i][j];
+            let m = main[i][j];
+
+            if d != MIN && (match_required || approx_eq!(f64, d, m)) {
+                // If this score was determined using
+                // SCORE_MATCH_CONSECUTIVE, the
+                // previous character MUST be a match
+                match_required = i > 0 && j > 0 && approx_eq!(f64, m, diagonal[i - 1][j - 1] + MATCH_CONSECUTIVE);
+                positions[i] = j;
+                break;
+            }
+            j -=1;
+        }
+    }
+
+    positions
+}
+
+fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usize) -> (Vec<Vec<f64>>, Vec<Vec<f64>>){
+    let bonus = bonus::compute(&choice.chars().collect::<Vec<char>>());
+    let mut diagonal = vec![vec![0 as f64; choice_length]; query_length];
+    let mut main = vec![vec![0 as f64; choice_length]; query_length];
+
+    query.iter().enumerate().for_each(|(i, qchar)| {
+        let mut prev_score = MIN;
+        let gap_score = if i == query_length - 1 {
+            GAP_TRAILING
+        } else {
+            GAP_INNER
+        };
+
+        choice.chars().enumerate().for_each(|(j, cchar)| {
+            if cchar.eq_ignore_ascii_case(&qchar) {
+                let bonus_score = bonus[j];
+
+                let current_score = if i == 0 {
+                    (j as f64 * GAP_LEADING) + bonus_score
+                } else if j > 0 {
+                    let m_score = main[i - 1][j - 1];
+                    let d_score = diagonal[i - 1][j - 1];
+
+                    (m_score + bonus_score).max(d_score + MATCH_CONSECUTIVE)
+                } else {
+                    MIN
+                };
+
+                prev_score = current_score.max(prev_score + gap_score);
+
+                diagonal[i][j] = current_score;
+                main[i][j] = prev_score;
+            } else {
+                prev_score += gap_score;
+
+                diagonal[i][j] = MIN;
+                main[i][j] = prev_score;
+            }
+        });
+    });
+
+    (main, diagonal)
 }
 
 impl Score {
     pub fn new(query: &[char], choice: &str) -> Score {
-        let mut score = Score {
-            query_length: query.len(),
-            choice_length: choice.chars().count(),
-            main: None,
-            diagonal: None,
-            score: None,
-            positions: None,
-        };
+        let query_length = query.len();
+        let choice_length = choice.chars().count();
 
-        if score.query_length == 0 {
+        if query_length == 0 {
             // empty needle
-            score.score = Some(MIN);
-            score.positions = Some(vec![]);
-        } else if score.query_length == score.choice_length {
+            Score { score: MIN, positions: vec![] }
+        } else if query_length == choice_length {
             // We only get here if we match so lengths match they
-            score.score = Some(MAX);
-            score.positions = Some((0..score.query_length).collect());
+            Score { score: MAX, positions: (0..query_length).collect() }
         } else {
-            let bonus = bonus::compute(&choice.chars().collect::<Vec<char>>());
-            let mut diagonal = vec![vec![0 as f64; score.choice_length]; score.query_length];
-            let mut main = vec![vec![0 as f64; score.choice_length]; score.query_length];
+            let (main, diagonal) = compute(&query, &choice, query_length, choice_length);
 
-            query.iter().enumerate().for_each(|(i, qchar)| {
-                let mut prev_score = MIN;
-                let gap_score = if i == score.query_length - 1 {
-                    GAP_TRAILING
-                } else {
-                    GAP_INNER
-                };
-
-                choice.chars().enumerate().for_each(|(j, cchar)| {
-                    if cchar.eq_ignore_ascii_case(&qchar) {
-                        let bonus_score = bonus[j];
-
-                        let current_score = if i == 0 {
-                            (j as f64 * GAP_LEADING) + bonus_score
-                        } else if j > 0 {
-                            let m_score = main[i - 1][j - 1];
-                            let d_score = diagonal[i - 1][j - 1];
-
-                            (m_score + bonus_score).max(d_score + MATCH_CONSECUTIVE)
-                        } else {
-                            MIN
-                        };
-
-                        prev_score = current_score.max(prev_score + gap_score);
-
-                        diagonal[i][j] = current_score;
-                        main[i][j] = prev_score;
-                    } else {
-                        prev_score += gap_score;
-
-                        diagonal[i][j] = MIN;
-                        main[i][j] = prev_score;
-                    }
-                });
-            });
-            score.diagonal = Some(diagonal);
-            score.main = Some(main);
-        }
-
-        score
-    }
-
-    pub fn score(&self) -> f64 {
-        match self.score {
-            Some(score) => score,
-            None => {
-                match &self.main {
-                    Some(main) => main[self.query_length - 1][self.choice_length - 1],
-                    None => MIN,
-                }
-            }
-        }
-    }
-
-    pub fn positions(&self) -> Vec<usize> {
-        match &self.positions {
-            Some(positions) => positions.to_vec(),
-            None => {
-                let mut positions = vec![0 as usize; self.query_length];
-
-                let mut match_required = false;
-                let mut j = self.choice_length - 1;
-                let diagonal = self.diagonal.as_ref().unwrap();
-                let main = self.main.as_ref().unwrap();
-
-                for i in (0..self.query_length).rev() {
-                    while j > (0 as usize) {
-                        let d = diagonal[i][j];
-                        let m = main[i][j];
-
-                        if d != MIN && (match_required || approx_eq!(f64, d, m)) {
-                            // If this score was determined using
-                            // SCORE_MATCH_CONSECUTIVE, the
-                            // previous character MUST be a match
-                            match_required = i > 0 && j > 0 && approx_eq!(f64, m, diagonal[i - 1][j - 1] + MATCH_CONSECUTIVE);
-                            positions[i] = j;
-                            break;
-                        }
-                        j -=1;
-                    }
-                }
-
-                positions
+            Score {
+                score: main[query_length - 1][choice_length - 1],
+                positions: positions(choice_length, query_length, main, diagonal)
             }
         }
     }
@@ -133,6 +109,7 @@ impl Score {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn prefer_starts_of_words_test() {
@@ -283,11 +260,35 @@ mod tests {
         assert_eq!(4, positions.len());
     }
 
+    #[bench]
+    fn bench_normal_scoring(b: &mut test::Bencher) {
+        let choice = "CODE_OF_CONDUCT.md";
+        let query = ['c', 'o', 'd', 'e'];
+
+        b.iter(|| compute(&query, &choice, 4, choice.len()))
+    }
+
+    #[bench]
+    fn bench_scoring_empty_query(b: &mut test::Bencher) {
+        let choice = "CODE_OF_CONDUCT.md";
+        let query = [];
+
+        b.iter(|| Score::new(&query, &choice))
+    }
+
+    #[bench]
+    fn bench_scoring_entire_query(b: &mut test::Bencher) {
+        let choice = "gem";
+        let query = ['g', 'e', 'm'];
+
+        b.iter(|| Score::new(&query, &choice))
+    }
+
     fn score(choice: &str, query: &str) -> f64 {
-        Score::new(&choice.chars().collect::<Vec<char>>(), query).score()
+        Score::new(&choice.chars().collect::<Vec<char>>(), query).score
     }
 
     fn positions(choice: &str, query: &str) -> Vec<usize> {
-        Score::new(&choice.chars().collect::<Vec<char>>(), query).positions()
+        Score::new(&choice.chars().collect::<Vec<char>>(), query).positions
     }
 }
