@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 use crate::cursor;
 use crate::matcher::Match;
 use crate::terminal::Terminal;
@@ -71,10 +73,10 @@ impl<'a> Choices<'a> {
         self.selected = 0;
         self.matches = self
             .choices
-            .iter()
+            .par_iter()
             .filter_map(|choice| Match::new(&query, &choice))
             .collect::<Vec<Match<'a>>>();
-        self.matches.sort();
+        self.matches.par_sort();
     }
 
     fn draw(&self) -> String {
