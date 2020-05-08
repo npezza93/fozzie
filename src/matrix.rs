@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-type Idx = (usize, usize);
+type Coordinate = (usize, usize);
 
 pub struct Matrix {
     width: usize,
@@ -16,16 +16,16 @@ impl Matrix {
     }
 }
 
-impl Index<Idx> for Matrix {
+impl Index<Coordinate> for Matrix {
     type Output = f32;
 
-    fn index(&self, (width, height): Idx) -> &Self::Output {
+    fn index(&self, (width, height): Coordinate) -> &Self::Output {
         &self.contents[height * self.width + width]
     }
 }
 
-impl IndexMut<Idx> for Matrix {
-    fn index_mut(&mut self, (width, height): Idx) -> &mut Self::Output {
+impl IndexMut<Coordinate> for Matrix {
+    fn index_mut(&mut self, (width, height): Coordinate) -> &mut Self::Output {
         &mut self.contents[height * self.width + width]
     }
 }
