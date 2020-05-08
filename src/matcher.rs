@@ -15,7 +15,9 @@ impl<'a> Match<'a> {
         let mut choice_chars = choice.chars();
 
         query.iter().all(|nchar| {
-            choice_chars.any(|cchar| cchar.eq_ignore_ascii_case(&nchar))
+            choice_chars.any(|cchar| {
+                nchar == &cchar || nchar.to_ascii_uppercase() == cchar
+           })
         })
     }
 
@@ -102,23 +104,23 @@ mod tests {
         assert!(Match::new(&['a'], "a").is_some());
         assert!(Match::new(&['a'], "abc").is_some());
         assert!(Match::new(&['a', 'b', 'c'], "abc").is_some());
-        assert!(Match::new(&['A', 'B', 'C'], "abc").is_some());
+        assert!(Match::new(&['A', 'B', 'C'], "abc").is_none());
         assert!(Match::new(&['a', 'b', 'c'], "a1b2c3").is_some());
         assert!(Match::new(&['a', 'b', 'c'], "a1b2c3").is_some());
         assert!(Match::new(&['t', 'e', 's', 't'], "t/e/s/t").is_some());
         assert!(Match::new(&['t', 'e', 's', 't'], "t💣e💣s💣t").is_some());
         assert!(Match::new(&['💣', '💣', '💣'], "t💣e💣s💣t").is_some());
 
-        assert!(!Match::new(&['a', 'b', 'c'], "ab").is_some());
-        assert!(!Match::new(&['a', 'b', 'c'], "cab").is_some());
-        assert!(!Match::new(&['a', 'b', 'c'], "").is_some());
+        assert!(Match::new(&['a', 'b', 'c'], "ab").is_none());
+        assert!(Match::new(&['a', 'b', 'c'], "cab").is_none());
+        assert!(Match::new(&['a', 'b', 'c'], "").is_none());
 
         assert!(Match::new(&[], "").is_some());
         assert!(Match::new(&[], "ab").is_some());
 
         // UTF-8 case testing
         assert!(Match::new(&['a'], "A").is_some());
-        assert!(Match::new(&['A'], "a").is_some());
+        assert!(Match::new(&['A'], "a").is_none());
     }
 
     #[test]
@@ -126,6 +128,13 @@ mod tests {
         let matcher = Match::new(&[], "foo").unwrap();
 
         assert_eq!("foo", matcher.draw(false, false));
+    }
+
+    #[test]
+    fn test_match_upper_case() {
+        assert!(Match::new(&['i', 'T'], "iTunes").is_some());
+        assert!(Match::new(&['i', 't'], "iTunes").is_some());
+        assert!(Match::new(&['I', 't'], "iTunes").is_none());
     }
 
     #[test]
@@ -167,6 +176,14 @@ mod tests {
     fn bench_matching(b: &mut test::Bencher) {
         let choice = "Gemfile";
         let query = ['g', 'e', 'm'];
+
+        b.iter(|| Match::is_match(&query, &choice))
+    }
+
+    #[bench]
+    fn bench_matching_uppercase(b: &mut test::Bencher) {
+        let choice = "Gemfile";
+        let query = ['G', 'e', 'm'];
 
         b.iter(|| Match::is_match(&query, &choice))
     }
