@@ -40,10 +40,22 @@ impl App {
         for c in terminal.keys()? {
             match c.unwrap() {
                 Key::Alt(c) => match c as u8 {
-                    b'b' => terminal.print(&search.left_word()),
-                    b'f' => terminal.print(&search.right_word()),
-                    127 => terminal.print(&search.backspace_word()),
-                    100 => terminal.print(&search.delete_word()),
+                    b'b' => {
+                        terminal.print(&search.left_word());
+                        terminal.print(&choices.filter(&search.query));
+                    },
+                    b'f' => {
+                        terminal.print(&search.right_word());
+                        terminal.print(&choices.filter(&search.query));
+                    },
+                    127 => {
+                        terminal.print(&search.backspace_word());
+                        terminal.print(&choices.filter(&search.query));
+                    },
+                    100 => {
+                        terminal.print(&search.delete_word());
+                        terminal.print(&choices.filter(&search.query));
+                    },
                     _ => {}
                 },
                 Key::Char('\n') => {
