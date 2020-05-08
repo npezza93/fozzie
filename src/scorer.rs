@@ -1,20 +1,20 @@
-use std::f64::{INFINITY, NEG_INFINITY};
+use std::f32::{INFINITY, NEG_INFINITY};
 use crate::bonus;
 use float_cmp::approx_eq;
 
-const MAX: f64 = INFINITY;
-pub const MIN: f64 = NEG_INFINITY;
-const GAP_TRAILING: f64 = -0.005;
-const GAP_INNER: f64 = -0.01;
-const GAP_LEADING:       f64 = -0.005;
-const MATCH_CONSECUTIVE: f64 = 1.0;
+const MAX: f32 = INFINITY;
+pub const MIN: f32 = NEG_INFINITY;
+const GAP_TRAILING: f32 = -0.005;
+const GAP_INNER: f32 = -0.01;
+const GAP_LEADING:       f32 = -0.005;
+const MATCH_CONSECUTIVE: f32 = 1.0;
 
 pub struct Score {
-    pub score: f64,
+    pub score: f32,
     pub positions: Vec<usize>,
 }
 
-fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f64>>, diagonal: Vec<Vec<f64>>) -> Vec<usize> {
+fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f32>>, diagonal: Vec<Vec<f32>>) -> Vec<usize> {
     let mut positions = vec![0 as usize; query_length];
 
     let mut match_required = false;
@@ -25,11 +25,11 @@ fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f64>>, dia
             let d = diagonal[i][j];
             let m = main[i][j];
 
-            if d != MIN && (match_required || approx_eq!(f64, d, m)) {
+            if d != MIN && (match_required || approx_eq!(f32, d, m)) {
                 // If this score was determined using
                 // SCORE_MATCH_CONSECUTIVE, the
                 // previous character MUST be a match
-                match_required = i > 0 && j > 0 && approx_eq!(f64, m, diagonal[i - 1][j - 1] + MATCH_CONSECUTIVE);
+                match_required = i > 0 && j > 0 && approx_eq!(f32, m, diagonal[i - 1][j - 1] + MATCH_CONSECUTIVE);
                 positions[i] = j;
                 break;
             }
@@ -40,10 +40,10 @@ fn positions(choice_length: usize, query_length: usize, main: Vec<Vec<f64>>, dia
     positions
 }
 
-fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usize) -> (Vec<Vec<f64>>, Vec<Vec<f64>>){
+fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usize) -> (Vec<Vec<f32>>, Vec<Vec<f32>>){
     let bonus = bonus::compute(&choice.chars().collect::<Vec<char>>());
-    let mut diagonal = vec![vec![0 as f64; choice_length]; query_length];
-    let mut main = vec![vec![0 as f64; choice_length]; query_length];
+    let mut diagonal = vec![vec![0 as f32; choice_length]; query_length];
+    let mut main = vec![vec![0 as f32; choice_length]; query_length];
 
     query.iter().enumerate().for_each(|(i, qchar)| {
         let mut prev_score = MIN;
@@ -58,7 +58,7 @@ fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usi
                 let bonus_score = bonus[j];
 
                 let current_score = if i == 0 {
-                    (j as f64 * GAP_LEADING) + bonus_score
+                    (j as f32 * GAP_LEADING) + bonus_score
                 } else if j > 0 {
                     let m_score = main[i - 1][j - 1];
                     let d_score = diagonal[i - 1][j - 1];
@@ -283,7 +283,7 @@ mod tests {
         b.iter(|| Score::new(&query, &choice))
     }
 
-    fn score(choice: &str, query: &str) -> f64 {
+    fn score(choice: &str, query: &str) -> f32 {
         Score::new(&choice.chars().collect::<Vec<char>>(), query).score
     }
 

@@ -51,7 +51,7 @@ impl<'a> Match<'a> {
         }
     }
 
-    fn score(&self) -> f64 {
+    fn score(&self) -> f32 {
         self.scorer.score
     }
 

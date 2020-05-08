@@ -1,9 +1,9 @@
-pub const SLASH: f64 = 0.9;
-pub const WORD: f64 = 0.85;
-pub const DOT: f64 = 0.6;
-pub const CAPITAL: f64 = 0.7;
+pub const SLASH: f32 = 0.9;
+pub const WORD: f32 = 0.85;
+pub const DOT: f32 = 0.6;
+pub const CAPITAL: f32 = 0.7;
 
-pub fn compute(choice_chars: &[char]) -> Vec<f64> {
+pub fn compute(choice_chars: &[char]) -> Vec<f32> {
     let mut last_char = '/';
 
     choice_chars
@@ -16,7 +16,7 @@ pub fn compute(choice_chars: &[char]) -> Vec<f64> {
         .collect()
 }
 
-fn for_char(prev: char, current: char) -> f64 {
+fn for_char(prev: char, current: char) -> f32 {
     match current {
         'a'..='z' | '0'..='9' => for_previous(prev),
         'A'..='Z' => match prev {
@@ -27,7 +27,7 @@ fn for_char(prev: char, current: char) -> f64 {
     }
 }
 
-fn for_previous(ch: char) -> f64 {
+fn for_previous(ch: char) -> f32 {
     match ch {
         '/' => SLASH,
         '-' | '_' | ' ' => WORD,
