@@ -162,4 +162,21 @@ mod tests {
 
         assert_eq!("( 0.89) \u{1b}[35mf\u{1b}[39moo", matcher.draw(false, true))
     }
+
+    #[bench]
+    fn bench_matching(b: &mut test::Bencher) {
+        let choice = "Gemfile";
+        let query = ['g', 'e', 'm'];
+
+        b.iter(|| Match::is_match(&query, &choice))
+    }
+
+    #[bench]
+    fn bench_drawing(b: &mut test::Bencher) {
+        let choice = "CODE_OF_CONDUCT.md";
+        let query = ['c', 'o', 'd', 'e'];
+        let match_ins = Match::new(&query, &choice).unwrap();
+
+        b.iter(|| match_ins.draw(false, false))
+    }
 }

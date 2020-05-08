@@ -109,7 +109,6 @@ impl Score {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::Bencher;
 
     #[test]
     fn prefer_starts_of_words_test() {
