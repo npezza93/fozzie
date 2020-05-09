@@ -145,7 +145,6 @@ jobs:
     - name: Build archive
       shell: bash
       run: |
-        outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
         staging="fozzie-${{ env.RELEASE_VERSION }}-${{ matrix.target }}"
 
         cp "target/${{ matrix.target }}/release/fozzie" "$staging/"
