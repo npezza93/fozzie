@@ -13,9 +13,7 @@ fozzie is a simple and quick fuzzy text selector for the terminal.
 
 ##### macOS and Linux
 
-```
-brew install fozzie
-```
+Go to the releases page, download the tar file, and place the executable in your path.
 
 ##### From source
 ```
