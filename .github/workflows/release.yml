@@ -59,29 +59,14 @@ jobs:
     name: build-release
     needs: ['create-release']
     runs-on: ${{ matrix.os }}
-    env:
-      # When CARGO is set to CROSS, this is set to `--target matrix.target`.
-      TARGET_FLAGS:
-      # When CARGO is set to CROSS, TARGET_DIR includes matrix.target.
-      CARGO_TARGET_DIR: ./target
-      # Emit backtraces on panics.
-      RUST_BACKTRACE: 1
-      # Build static releases with PCRE2.
-      PCRE2_SYS_STATIC: 1
-      # Apparently needed to use a2x on macOS.
-      XML_CATALOG_FILES: /usr/local/etc/xml/catalog
     strategy:
       matrix:
-        build: [linux, linux-arm, macos]
+        build: [linux, macos]
         include:
         - build: linux
           os: ubuntu-18.04
           rust: nightly
           target: x86_64-unknown-linux-musl
-        - build: linux-arm
-          os: ubuntu-18.04
-          rust: nightly
-          target: arm-unknown-linux-gnueabihf
         - build: macos
           os: macos-latest
           rust: nightly
@@ -101,11 +86,6 @@ jobs:
         override: true
         target: ${{ matrix.target }}
 
-    - name: Show command used for Cargo
-      run: |
-        echo "target flag is: ${{ env.TARGET_FLAGS }}"
-        echo "target dir is: ${{ env.CARGO_TARGET_DIR }}"
-
     - name: Get release download URL
       uses: actions/download-artifact@v1
       with:
@@ -123,29 +103,17 @@ jobs:
         echo "release version: $RELEASE_VERSION"
 
     - name: Build release binary
-      run: cargo build --verbose --release ${{ env.TARGET_FLAGS }}
-
-    # - name: Strip release binary (linux and macos)
-    #   if: matrix.build == 'linux' || matrix.build == 'macos'
-    #   run: strip "target/${{ matrix.target }}/release/fozzie"
-
-    # - name: Strip release binary (arm)
-    #   if: matrix.build == 'linux-arm'
-    #   run: |
-    #     docker run --rm -v \
-    #       "$PWD/target:/target:Z" \
-    #       rustembedded/cross:arm-unknown-linux-gnueabihf \
-    #       arm-linux-gnueabihf-strip \
-    #       /target/arm-unknown-linux-gnueabihf/release/fozzie
+      run: cargo build --release --target ${{ matrix.target }} --locked
 
     - name: Build archive
       shell: bash
       run: |
-        staging="fozzie-${{ env.RELEASE_VERSION }}-${{ matrix.target }}"
+        name="fozzie-${{env.RELEASE_VERSION}}-${{ matrix.target }}"
+        mkdir $name
+        cp target/${{ matrix.target }}/release/fozzie $name/
+        tar czvf $name.tar.gz $name
 
-        cp "./target/${{ matrix.target }}/release/fozzie" "$staging/"
-        tar czf "$staging.tar.gz" "$staging"
-        echo "::set-env name=ASSET::$staging.tar.gz"
+        echo "::set-env name=ASSET::$name.tar.gz"
 
     - name: Upload release archive
       uses: actions/upload-release-asset@v1.0.1
