@@ -142,6 +142,16 @@ jobs:
     #       arm-linux-gnueabihf-strip \
     #       /target/arm-unknown-linux-gnueabihf/release/fozzie
 
+    - name: Build archive
+      shell: bash
+      run: |
+        outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
+        staging="fozzie-${{ env.RELEASE_VERSION }}-${{ matrix.target }}"
+
+        cp "target/${{ matrix.target }}/release/fozzie" "$staging/"
+        tar czf "$staging.tar.gz" "$staging"
+        echo "::set-env name=ASSET::$staging.tar.gz"
+
     - name: Upload release archive
       uses: actions/upload-release-asset@v1.0.1
       env:
