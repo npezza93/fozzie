@@ -129,18 +129,18 @@ jobs:
     - name: Build release binary
       run: ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
 
-    - name: Strip release binary (linux and macos)
-      if: matrix.build == 'linux' || matrix.build == 'macos'
-      run: strip "target/${{ matrix.target }}/release/fozzie"
+    # - name: Strip release binary (linux and macos)
+    #   if: matrix.build == 'linux' || matrix.build == 'macos'
+    #   run: strip "target/${{ matrix.target }}/release/fozzie"
 
-    - name: Strip release binary (arm)
-      if: matrix.build == 'linux-arm'
-      run: |
-        docker run --rm -v \
-          "$PWD/target:/target:Z" \
-          rustembedded/cross:arm-unknown-linux-gnueabihf \
-          arm-linux-gnueabihf-strip \
-          /target/arm-unknown-linux-gnueabihf/release/fozzie
+    # - name: Strip release binary (arm)
+    #   if: matrix.build == 'linux-arm'
+    #   run: |
+    #     docker run --rm -v \
+    #       "$PWD/target:/target:Z" \
+    #       rustembedded/cross:arm-unknown-linux-gnueabihf \
+    #       arm-linux-gnueabihf-strip \
+    #       /target/arm-unknown-linux-gnueabihf/release/fozzie
 
     - name: Upload release archive
       uses: actions/upload-release-asset@v1.0.1
