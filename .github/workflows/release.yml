@@ -60,13 +60,10 @@ jobs:
     needs: ['create-release']
     runs-on: ${{ matrix.os }}
     env:
-      # For some builds, we use cross to test on 32-bit and big-endian
-      # systems.
-      CARGO: cargo
       # When CARGO is set to CROSS, this is set to `--target matrix.target`.
       TARGET_FLAGS:
       # When CARGO is set to CROSS, TARGET_DIR includes matrix.target.
-      TARGET_DIR: ./target
+      CARGO_TARGET_DIR: ./target
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
       # Build static releases with PCRE2.
@@ -106,9 +103,8 @@ jobs:
 
     - name: Show command used for Cargo
       run: |
-        echo "cargo command is: ${{ env.CARGO }}"
         echo "target flag is: ${{ env.TARGET_FLAGS }}"
-        echo "target dir is: ${{ env.TARGET_DIR }}"
+        echo "target dir is: ${{ env.CARGO_TARGET_DIR }}"
 
     - name: Get release download URL
       uses: actions/download-artifact@v1
@@ -127,7 +123,7 @@ jobs:
         echo "release version: $RELEASE_VERSION"
 
     - name: Build release binary
-      run: ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
+      run: cargo build --verbose --release ${{ env.TARGET_FLAGS }}
 
     # - name: Strip release binary (linux and macos)
     #   if: matrix.build == 'linux' || matrix.build == 'macos'
@@ -147,7 +143,7 @@ jobs:
       run: |
         staging="fozzie-${{ env.RELEASE_VERSION }}-${{ matrix.target }}"
 
-        cp "target/${{ matrix.target }}/release/fozzie" "$staging/"
+        cp "./target/${{ matrix.target }}/release/fozzie" "$staging/"
         tar czf "$staging.tar.gz" "$staging"
         echo "::set-env name=ASSET::$staging.tar.gz"
 
