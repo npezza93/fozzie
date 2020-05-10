@@ -60,7 +60,7 @@ impl Config {
             .help("Show the scores of each match")
     }
 
-    fn menu<'a>() -> App<'a, 'a> {
+    pub fn menu<'a>() -> App<'a, 'a> {
         App::new("fozzie")
             .version(env!("CARGO_PKG_VERSION"))
             .author("Nick Pezza")

@@ -96,7 +96,9 @@ jobs:
       run: |
         name="fozzie-${{env.RELEASE_VERSION}}-${{ matrix.target }}"
         mkdir $name
+        mkdir -p "$name"/complete
         cp target/${{ matrix.target }}/release/fozzie $name/
+        cp target/${{ matrix.target }}/release/{fozzie.bash,fozzie.fish,_fozzie} $name/complete
         tar czvf $name.tar.gz $name
 
         echo "::set-env name=ASSET::$name.tar.gz"
