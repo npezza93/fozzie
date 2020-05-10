@@ -1,26 +1,37 @@
-use clap::{App, Arg, ArgMatches, Error, ErrorKind};
+use regex::Regex;
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, Error};
 
 pub struct Config {
     pub lines: usize,
     pub prompt: String,
     pub show_scores: bool,
     pub query: Option<String>,
+    pub delimiter: Option<Regex>,
+    pub field: Option<usize>,
+    pub output: Option<usize>,
 }
 
 impl Config {
     pub fn new() -> Self {
         let matches = Self::menu().get_matches();
 
-        let lines = Self::parse_lines(&matches);
-        let prompt = Self::parse_prompt(&matches);
-        let query = Self::parse_query(&matches);
+        let lines       = parse_lines(&matches);
+        let prompt      = value_t_or_exit!(matches, "prompt", String);
         let show_scores = matches.is_present("show-scores");
+        let query       = optional_str_value_or_exit(&matches, "query");
+
+        let delimiter   = parse_delimiter(&matches);
+        let field       = subcommand_usize_value_or_exit(&matches, "field");
+        let output      = subcommand_usize_value_or_exit(&matches, "output");
 
         Self {
             lines,
             prompt,
-            query,
             show_scores,
+            query,
+            delimiter,
+            field,
+            output,
         }
     }
 
@@ -44,6 +55,13 @@ impl Config {
             .default_value("❯ ")
     }
 
+    fn show_scores_arg<'a>() -> Arg<'a, 'a> {
+        Arg::with_name("show-scores")
+            .short("s")
+            .long("show-scores")
+            .help("Show the scores of each match")
+    }
+
     fn query_arg<'a>() -> Arg<'a, 'a> {
         Arg::with_name("query")
             .short("q")
@@ -53,46 +71,102 @@ impl Config {
             .takes_value(true)
     }
 
-    fn show_scores_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("show-scores")
-            .short("s")
-            .long("show-scores")
-            .help("Show the scores of each match")
+    fn delimiter_arg<'a>() -> Arg<'a, 'a> {
+        Arg::with_name("delimiter")
+            .short("d")
+            .long("delimiter")
+            .value_name("DELIMITER")
+            .help("Use to split the line into fields")
+            .takes_value(true)
+            .required(true)
+    }
+
+    fn field_arg<'a>() -> Arg<'a, 'a> {
+        Arg::with_name("field")
+            .short("f")
+            .long("field")
+            .value_name("FIELD")
+            .help("Field to be matched")
+            .takes_value(true)
+            .required(true)
+    }
+
+    fn output_arg<'a>() -> Arg<'a, 'a> {
+        Arg::with_name("output")
+            .short("o")
+            .long("output")
+            .value_name("OUTPUT")
+            .help("Field to be returned once selected [default: FIELD]")
+            .takes_value(true)
     }
 
     pub fn menu<'a>() -> App<'a, 'a> {
         App::new("fozzie")
-            .version(env!("CARGO_PKG_VERSION"))
-            .author("Nick Pezza")
+            .version(crate_version!())
+            .author(crate_authors!())
+            .setting(AppSettings::DisableHelpSubcommand)
             .arg(Self::lines_arg())
             .arg(Self::prompt_arg())
             .arg(Self::query_arg())
             .arg(Self::show_scores_arg())
+            .subcommand(Self::split_subcommand())
     }
 
-    fn parse_lines(matches: &ArgMatches) -> usize {
-        let lines = value_t!(matches, "lines", usize).unwrap_or_else(|e| e.exit());
+    fn split_subcommand<'a>() -> App<'a, 'a> {
+        SubCommand::with_name("split")
+            .about("Splits lines into fields")
+            .setting(AppSettings::DisableVersion)
+            .arg(Self::delimiter_arg())
+            .arg(Self::field_arg())
+            .arg(Self::output_arg())
+    }
+}
 
-        if lines < 1 {
-            Error::with_description(
-                "'lines' must be greater than or equal to 1",
-                ErrorKind::InvalidValue,
-            )
-            .exit();
+fn optional_str_value_or_exit(matches: &ArgMatches, field: &str) -> Option<String> {
+    if matches.is_present(field) {
+        Some(value_t_or_exit!(matches, field, String))
+    } else {
+        None
+    }
+}
+
+fn optional_usize_value_or_exit(matches: &ArgMatches, field: &str) -> Option<usize> {
+    if matches.is_present(field) {
+        Some(value_t_or_exit!(matches, field, usize))
+    } else {
+        None
+    }
+}
+
+fn subcommand_usize_value_or_exit(matches: &ArgMatches, field: &str) -> Option<usize> {
+    if let Some(matches) = matches.subcommand_matches("split") {
+        optional_usize_value_or_exit(matches, field)
+    } else {
+        None
+    }
+}
+
+fn parse_lines(matches: &ArgMatches) -> usize {
+    let lines = value_t_or_exit!(matches, "lines", usize);
+
+    if lines < 1 {
+        Error::value_validation_auto(format!("The argument '{}' must be greater than 0", "lines")).exit();
+    }
+    if let Some((_w, h)) = term_size::dimensions() {
+        if h <= lines {
+            Error::value_validation_auto(format!("The argument '{}' must be less than {}", "lines", h)).exit();
         }
-
-        lines
     }
 
-    fn parse_query(matches: &ArgMatches) -> Option<String> {
-        if matches.is_present("query") {
-            Some(value_t!(matches, "query", String).unwrap_or_else(|e| e.exit()))
-        } else {
-            None
-        }
-    }
+    lines
+}
 
-    fn parse_prompt(matches: &ArgMatches) -> String {
-        value_t!(matches, "prompt", String).unwrap_or_else(|e| e.exit())
+fn parse_delimiter(matches: &ArgMatches) -> Option<Regex> {
+    if let Some(matches) = matches.subcommand_matches("split") {
+        let delimiter = value_t_or_exit!(matches, "delimiter", String);
+
+        Some(Regex::new(&delimiter).unwrap())
+    } else {
+        None
     }
 }

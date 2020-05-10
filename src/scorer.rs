@@ -55,7 +55,7 @@ fn compute(query: &[char], choice: &Choice, query_length: usize, choice_length: 
             GAP_INNER
         };
 
-        choice.lower_content.iter().enumerate().for_each(|(j, cchar)| {
+        choice.lower_searchable.iter().enumerate().for_each(|(j, cchar)| {
             if qchar == cchar {
                 let bonus_score = choice.bonus[j];
 
@@ -93,15 +93,15 @@ impl Score {
         if query_length == 0 {
             // empty needle
             Score { score: MIN, positions: vec![] }
-        } else if query_length == choice.len {
+        } else if query_length == choice.searchable_len {
             // We only get here if we match so lengths match they
             Score { score: MAX, positions: (0..query_length).collect() }
         } else {
-            let (main, diagonal) = compute(&query, &choice, query_length, choice.len);
+            let (main, diagonal) = compute(&query, &choice, query_length, choice.searchable_len);
 
             Score {
-                score: main[(query_length - 1, choice.len - 1)],
-                positions: positions(choice.len, query_length, main, diagonal)
+                score: main[(query_length - 1, choice.searchable_len - 1)],
+                positions: positions(choice.searchable_len, query_length, main, diagonal)
             }
         }
     }
@@ -111,6 +111,7 @@ impl Score {
 mod tests {
     use super::*;
     use crate::bonus;
+    use crate::config::Config;
 
     #[test]
     fn prefer_starts_of_words_test() {
@@ -275,15 +276,15 @@ mod tests {
 
     #[bench]
     fn bench_normal_scoring(b: &mut test::Bencher) {
-        let choice = Choice::new("CODE_OF_CONDUCT.md");
+        let choice = Choice::new("CODE_OF_CONDUCT.md", &config());
         let query = ['c', 'o', 'd', 'e'];
 
-        b.iter(|| compute(&query, &choice, 4, choice.len))
+        b.iter(|| compute(&query, &choice, 4, choice.searchable_len))
     }
 
     #[bench]
     fn bench_scoring_empty_query(b: &mut test::Bencher) {
-        let choice = Choice::new("CODE_OF_CONDUCT.md");
+        let choice = Choice::new("CODE_OF_CONDUCT.md", &config());
         let query = [];
 
         b.iter(|| Score::new(&query, &choice))
@@ -291,7 +292,7 @@ mod tests {
 
     #[bench]
     fn bench_scoring_entire_query(b: &mut test::Bencher) {
-        let choice = Choice::new("gem");
+        let choice = Choice::new("gem", &config());
         let query = ['g', 'e', 'm'];
 
         b.iter(|| Score::new(&query, &choice))
@@ -300,14 +301,21 @@ mod tests {
     fn score(choice: &str, query: &str) -> f32 {
         Score::new(
             &choice.chars().collect::<Vec<char>>(),
-            &Choice::new(query)
+            &Choice::new(query, &config())
         ).score
     }
 
     fn positions(choice: &str, query: &str) -> Vec<usize> {
         Score::new(
             &choice.chars().collect::<Vec<char>>(),
-            &Choice::new(query)
+            &Choice::new(query, &config())
         ).positions
+    }
+
+    fn config() -> Config {
+        Config {
+            lines: 10, prompt: ">".to_string(), show_scores: false,
+            query: None, delimiter: None, field: None, output: None
+        }
     }
 }

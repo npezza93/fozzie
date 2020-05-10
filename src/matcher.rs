@@ -23,7 +23,7 @@ impl<'a> Match<'a> {
     }
 
     pub fn new(query: &[char], choice: &'a Choice) -> Option<Self> {
-        if Self::is_match(&query, &choice.content) {
+        if Self::is_match(&query, &choice.searchable) {
             Some(Self {
                 choice,
                 scorer: Score::new(&query, &choice),
@@ -58,7 +58,7 @@ impl<'a> Match<'a> {
 
     fn draw_highlights(&self) -> String {
         self.choice
-            .content
+            .searchable
             .chars()
             .enumerate()
             .map(|(i, cchar)| {
@@ -74,7 +74,7 @@ impl<'a> Match<'a> {
 
 impl<'a> fmt::Display for Match<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.choice.content)
+        write!(f, "{}", self.choice.searchable)
     }
 }
 
@@ -100,6 +100,7 @@ impl<'a> PartialEq for Match<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Config;
 
     #[test]
     fn test_is_match() {
@@ -209,6 +210,11 @@ mod tests {
     }
 
     fn make_choice(choice: &str) -> Choice {
-        Choice::new(choice)
+        let config = Config {
+            lines: 10, prompt: ">".to_string(), show_scores: false,
+            query: None, delimiter: None, field: None, output: None
+        };
+
+        Choice::new(choice, &config)
     }
 }

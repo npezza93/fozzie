@@ -1,6 +1,7 @@
 #![feature(test)]
 #[macro_use]
 extern crate clap;
+extern crate term_size;
 extern crate test;
 
 pub mod bonus;
@@ -42,7 +43,7 @@ impl App {
         let parsed_choices: Vec<Choice> =
             buffer.
             par_lines().
-            map(|choice| Choice::new(choice)).
+            map(|choice| Choice::new(choice, &config)).
             collect();
 
         let mut search = Search::new(config.prompt);
@@ -83,7 +84,7 @@ impl App {
                     break;
                 }
                 Key::Char('\t') => {
-                    terminal.print(&search.set_query(&choices.current_match()));
+                    terminal.print(&search.set_query(&choices.current_match().searchable));
                     terminal.print(&choices.filter(&search.query));
                 }
                 Key::Char(c) => {
