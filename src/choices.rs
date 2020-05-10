@@ -1,11 +1,12 @@
 use rayon::prelude::*;
 
+use crate::choice::Choice;
 use crate::cursor;
 use crate::matcher::Match;
 use crate::terminal::Terminal;
 
 pub struct Choices<'a> {
-    choices: &'a [String],
+    choices: &'a [Choice],
     selected: usize,
     max_choices: usize,
     matches: Vec<Match<'a>>,
@@ -15,7 +16,7 @@ pub struct Choices<'a> {
 impl<'a> Choices<'a> {
     const OFFSET: usize = 1;
 
-    pub fn new(max_choices: usize, choices: &'a [String], show_scores: bool) -> Choices<'a> {
+    pub fn new(max_choices: usize, choices: &'a [Choice], show_scores: bool) -> Choices<'a> {
         Choices {
             selected: 0,
             matches: vec![],
@@ -61,7 +62,7 @@ impl<'a> Choices<'a> {
     }
 
     pub fn current_match(&self) -> &str {
-        &self.matches[self.selected].choice
+        &self.matches[self.selected].choice.content
     }
 
     pub fn cancel(&self) -> String {
@@ -140,28 +141,29 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let input: Vec<String> = vec![
-            "foo".to_string(),
-            "bar".to_string(),
-            "baz".to_string(),
-            "boo".to_string(),
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+            Choice::new("baz".to_string()),
+            Choice::new("boo".to_string()),
         ];
         let choices = Choices::new(4, &input, false);
 
-        let expected_choices: &[String] = &input;
-
         assert_eq!(4, choices.max_choices);
         assert_eq!(0, choices.selected);
-        assert_eq!(expected_choices, choices.choices);
+        assert_eq!(
+            vec!["foo", "bar", "baz", "boo"],
+            choices.choices.iter().map(|choice| choice.content.clone()).collect::<Vec<String>>(),
+        );
     }
 
     #[test]
     fn test_new_max_choices() {
-        let input: Vec<String> = vec![
-            "foo".to_string(),
-            "bar".to_string(),
-            "baz".to_string(),
-            "boo".to_string(),
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+            Choice::new("baz".to_string()),
+            Choice::new("boo".to_string()),
         ];
         let choices = Choices::new(2, &input, false);
 
@@ -170,7 +172,10 @@ mod tests {
 
     #[test]
     fn test_filter() {
-        let input: Vec<String> = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let mut choices = Choices::new(4, &input, false);
 
         assert_eq!(
@@ -188,14 +193,17 @@ mod tests {
             choices
                 .matches
                 .iter()
-                .map(|matcher| matcher.choice)
-                .collect::<Vec<&str>>()
+                .map(|matcher| matcher.choice.content.clone())
+                .collect::<Vec<String>>()
         );
     }
 
     #[test]
     fn test_previous_when_wrapping() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
 
@@ -214,7 +222,10 @@ mod tests {
 
     #[test]
     fn test_previous() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
         choices.selected = 1;
@@ -234,7 +245,10 @@ mod tests {
 
     #[test]
     fn test_next_when_wrapping() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
         choices.selected = 1;
@@ -254,7 +268,10 @@ mod tests {
 
     #[test]
     fn test_next() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
 
@@ -273,7 +290,10 @@ mod tests {
 
     #[test]
     fn test_cancel() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let choices = Choices::new(4, &input, false);
 
         assert_eq!(
@@ -284,7 +304,10 @@ mod tests {
 
     #[test]
     fn test_current_match() {
-        let input = vec!["foo".to_string(), "bar".to_string()];
+        let input: Vec<Choice> = vec![
+            Choice::new("foo".to_string()),
+            Choice::new("bar".to_string()),
+        ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
 
@@ -293,17 +316,17 @@ mod tests {
 
     #[bench]
     fn bench_filtering(b: &mut test::Bencher) {
-        let choices: Vec<String> = vec![
-            "CODE_OF_CONDUCT.md".to_string(),
-            "Cargo.lock".to_string(),
-            "Cargo.toml".to_string(),
-            "LICENSE".to_string(),
-            "README.md".to_string(),
-            "benches/choices.rs".to_string(),
-            "benches/drawing.rs".to_string(),
-            "benches/matching.rs".to_string(),
-            "benches/scoring.rs".to_string(),
-            "src/bonus.rs".to_string()
+        let choices: Vec<Choice> = vec![
+            Choice::new("CODE_OF_CONDUCT.md".to_string()),
+            Choice::new("Cargo.lock".to_string()),
+            Choice::new("Cargo.toml".to_string()),
+            Choice::new("LICENSE".to_string()),
+            Choice::new("README.md".to_string()),
+            Choice::new("benches/choices.rs".to_string()),
+            Choice::new("benches/drawing.rs".to_string()),
+            Choice::new("benches/matching.rs".to_string()),
+            Choice::new("benches/scoring.rs".to_string()),
+            Choice::new("src/bonus.rs".to_string())
         ];
         let query = ['c', 'o', 'd', 'e'];
 

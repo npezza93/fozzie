@@ -1,10 +1,11 @@
+use crate::choice::Choice;
 use crate::color;
 use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
 use std::fmt;
 
 pub struct Match<'a> {
-    pub choice: &'a str,
+    pub choice: &'a Choice,
     scorer: Score,
 }
 
@@ -21,8 +22,8 @@ impl<'a> Match<'a> {
         })
     }
 
-    pub fn new(query: &[char], choice: &'a str) -> Option<Self> {
-        if Self::is_match(&query, &choice) {
+    pub fn new(query: &[char], choice: &'a Choice) -> Option<Self> {
+        if Self::is_match(&query, &choice.content) {
             Some(Self {
                 choice,
                 scorer: Score::new(&query, &choice),
@@ -57,6 +58,7 @@ impl<'a> Match<'a> {
 
     fn draw_highlights(&self) -> String {
         self.choice
+            .content
             .chars()
             .enumerate()
             .map(|(i, cchar)| {
@@ -72,7 +74,7 @@ impl<'a> Match<'a> {
 
 impl<'a> fmt::Display for Match<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.choice)
+        write!(f, "{}", self.choice.content)
     }
 }
 
@@ -101,73 +103,79 @@ mod tests {
 
     #[test]
     fn test_is_match() {
-        assert!(Match::new(&['a'], "a").is_some());
-        assert!(Match::new(&['a'], "abc").is_some());
-        assert!(Match::new(&['a', 'b', 'c'], "abc").is_some());
-        assert!(Match::new(&['A', 'B', 'C'], "abc").is_none());
-        assert!(Match::new(&['a', 'b', 'c'], "a1b2c3").is_some());
-        assert!(Match::new(&['a', 'b', 'c'], "a1b2c3").is_some());
-        assert!(Match::new(&['t', 'e', 's', 't'], "t/e/s/t").is_some());
-        assert!(Match::new(&['t', 'e', 's', 't'], "t💣e💣s💣t").is_some());
-        assert!(Match::new(&['💣', '💣', '💣'], "t💣e💣s💣t").is_some());
+        assert!(new_match("a", &make_choice("a")).is_some());
+        assert!(new_match("a", &make_choice("abc")).is_some());
+        assert!(new_match("abc", &make_choice("abc")).is_some());
+        assert!(new_match("ABC", &make_choice("abc")).is_none());
+        assert!(new_match("abc", &make_choice("a1b2c3")).is_some());
+        assert!(new_match("abc", &make_choice("a1b2c3")).is_some());
+        assert!(new_match("test", &make_choice("t/e/s/t")).is_some());
+        assert!(new_match("test", &make_choice("t💣e💣s💣t")).is_some());
+        assert!(new_match("💣💣💣", &make_choice("t💣e💣s💣t")).is_some());
 
-        assert!(Match::new(&['a', 'b', 'c'], "ab").is_none());
-        assert!(Match::new(&['a', 'b', 'c'], "cab").is_none());
-        assert!(Match::new(&['a', 'b', 'c'], "").is_none());
+        assert!(new_match("abc", &make_choice("ab")).is_none());
+        assert!(new_match("abc", &make_choice("cab")).is_none());
+        assert!(new_match("abc", &make_choice("")).is_none());
 
-        assert!(Match::new(&[], "").is_some());
-        assert!(Match::new(&[], "ab").is_some());
+        assert!(new_match("", &make_choice("")).is_some());
+        assert!(new_match("", &make_choice("ab")).is_some());
 
         // UTF-8 case testing
-        assert!(Match::new(&['a'], "A").is_some());
-        assert!(Match::new(&['A'], "a").is_none());
+        assert!(new_match("a", &make_choice("A")).is_some());
+        assert!(new_match("A", &make_choice("a")).is_none());
     }
 
     #[test]
     fn test_draw_not_selected() {
-        let matcher = Match::new(&[], "foo").unwrap();
+        let choice = make_choice("foo");
+        let matcher = new_match("", &choice).unwrap();
 
         assert_eq!("foo", matcher.draw(false, false));
     }
 
     #[test]
     fn test_match_upper_case() {
-        assert!(Match::new(&['i', 'T'], "iTunes").is_some());
-        assert!(Match::new(&['i', 't'], "iTunes").is_some());
-        assert!(Match::new(&['I', 't'], "iTunes").is_none());
+        assert!(new_match("iT", &make_choice("iTunes")).is_some());
+        assert!(new_match("it", &make_choice("iTunes")).is_some());
+        assert!(new_match("It", &make_choice("iTunes")).is_none());
     }
 
     #[test]
     fn test_draw_selected() {
-        let matcher = Match::new(&[], "foo").unwrap();
+        let choice = make_choice("foo");
+        let matcher = new_match("", &choice).unwrap();
 
         assert_eq!("\x1B[7mfoo\x1B[27m", matcher.draw(true, false));
     }
 
     #[test]
     fn test_drawing_unselected_highlights() {
-        let matcher = Match::new(&['f'], "foo").unwrap();
+        let choice = make_choice("foo");
+        let matcher = new_match("f", &choice).unwrap();
 
         assert_eq!("\x1B[33mf\x1B[39moo", matcher.draw(false, false));
     }
 
     #[test]
     fn test_drawing_selected_highlights() {
-        let matcher = Match::new(&['f'], "foo").unwrap();
+        let choice = make_choice("foo");
+        let matcher = new_match("f", &choice).unwrap();
 
         assert_eq!("\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m", matcher.draw(true, false));
     }
 
     #[test]
     fn drawing_with_show_scores_empty_test() {
-        let matcher = Match::new(&[], "foo").unwrap();
+        let choice = make_choice("foo");
+        let matcher = new_match("", &choice).unwrap();
 
         assert_eq!("(     ) foo", matcher.draw(false, true))
     }
 
     #[test]
     fn drawing_with_show_scores_test() {
-        let matcher = Match::new(&['f'], "foo").unwrap();
+        let choice = make_choice("foo");
+        let matcher = new_match("f", &choice).unwrap();
 
         assert_eq!("( 0.89) \u{1b}[33mf\u{1b}[39moo", matcher.draw(false, true))
     }
@@ -190,10 +198,17 @@ mod tests {
 
     #[bench]
     fn bench_drawing(b: &mut test::Bencher) {
-        let choice = "CODE_OF_CONDUCT.md";
-        let query = ['c', 'o', 'd', 'e'];
-        let match_ins = Match::new(&query, &choice).unwrap();
+        let choice = make_choice("CODE_OF_CONDUCT.md");
+        let match_ins = new_match("code", &choice).unwrap();
 
         b.iter(|| match_ins.draw(false, false))
+    }
+
+    fn new_match<'a>(query: &str, choice: &'a Choice) -> Option<Match<'a>> {
+        Match::new(&query.chars().collect::<Vec<char>>(), choice)
+    }
+
+    fn make_choice(choice: &str) -> Choice {
+        Choice::new(choice.to_string())
     }
 }

@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::bonus;
+use crate::choice::Choice;
 use crate::matrix::Matrix;
 use float_cmp::approx_eq;
 
@@ -42,10 +42,10 @@ fn positions(choice_length: usize, query_length: usize, main: Matrix, diagonal: 
     positions
 }
 
-fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usize) -> (Matrix, Matrix){
-    let bonus = bonus::compute(&choice.chars().collect::<Vec<char>>());
+fn compute(query: &[char], choice: &Choice, query_length: usize, choice_length: usize) -> (Matrix, Matrix){
+    let bonus = &choice.bonus;
     let lower_query: Vec<char> = query.iter().map(|qchar| qchar.to_ascii_lowercase()).collect();
-    let lower_choice: Vec<char> = choice.chars().map(|cchar| cchar.to_ascii_lowercase()).collect();
+    let lower_choice: Vec<char> = choice.content.chars().map(|cchar| cchar.to_ascii_lowercase()).collect();
     let mut diagonal = Matrix::new(query_length, choice_length);
     let mut main = Matrix::new(query_length, choice_length);
 
@@ -89,9 +89,9 @@ fn compute(query: &[char], choice: &str, query_length: usize, choice_length: usi
 }
 
 impl Score {
-    pub fn new(query: &[char], choice: &str) -> Score {
+    pub fn new(query: &[char], choice: &Choice) -> Score {
         let query_length = query.len();
-        let choice_length = choice.chars().count();
+        let choice_length = choice.content.chars().count();
 
         if query_length == 0 {
             // empty needle
@@ -113,6 +113,7 @@ impl Score {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bonus;
 
     #[test]
     fn prefer_starts_of_words_test() {
@@ -277,15 +278,15 @@ mod tests {
 
     #[bench]
     fn bench_normal_scoring(b: &mut test::Bencher) {
-        let choice = "CODE_OF_CONDUCT.md";
+        let choice = Choice::new("CODE_OF_CONDUCT.md".to_string());
         let query = ['c', 'o', 'd', 'e'];
 
-        b.iter(|| compute(&query, &choice, 4, choice.len()))
+        b.iter(|| compute(&query, &choice, 4, choice.content.len()))
     }
 
     #[bench]
     fn bench_scoring_empty_query(b: &mut test::Bencher) {
-        let choice = "CODE_OF_CONDUCT.md";
+        let choice = Choice::new("CODE_OF_CONDUCT.md".to_string());
         let query = [];
 
         b.iter(|| Score::new(&query, &choice))
@@ -293,17 +294,23 @@ mod tests {
 
     #[bench]
     fn bench_scoring_entire_query(b: &mut test::Bencher) {
-        let choice = "gem";
+        let choice = Choice::new("gem".to_string());
         let query = ['g', 'e', 'm'];
 
         b.iter(|| Score::new(&query, &choice))
     }
 
     fn score(choice: &str, query: &str) -> f32 {
-        Score::new(&choice.chars().collect::<Vec<char>>(), query).score
+        Score::new(
+            &choice.chars().collect::<Vec<char>>(),
+            &Choice::new(query.to_string())
+        ).score
     }
 
     fn positions(choice: &str, query: &str) -> Vec<usize> {
-        Score::new(&choice.chars().collect::<Vec<char>>(), query).positions
+        Score::new(
+            &choice.chars().collect::<Vec<char>>(),
+            &Choice::new(query.to_string())
+        ).positions
     }
 }

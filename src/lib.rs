@@ -5,6 +5,7 @@ extern crate test;
 
 pub mod bonus;
 pub mod choices;
+pub mod choice;
 pub mod color;
 pub mod config;
 pub mod cursor;
@@ -14,6 +15,7 @@ pub mod scorer;
 pub mod search;
 pub mod terminal;
 
+use choice::Choice;
 use choices::Choices;
 use config::Config;
 use search::Search;
@@ -30,7 +32,10 @@ impl App {
         let mut exit_code = 0;
 
         let mut terminal = Terminal::new()?;
-        let parsed_choices: Vec<String> = stdin().lock().lines().map(Result::unwrap).collect();
+        let parsed_choices: Vec<Choice> =
+            stdin().lock().lines().map(Result::unwrap).map(|choice| {
+            Choice::new(choice)
+        }).collect();
         let mut search = Search::new(config.prompt);
         let mut choices = Choices::new(config.lines, &parsed_choices, config.show_scores);
 
