@@ -43,9 +43,7 @@ fn positions(choice_length: usize, query_length: usize, main: Matrix, diagonal: 
 }
 
 fn compute(query: &[char], choice: &Choice, query_length: usize, choice_length: usize) -> (Matrix, Matrix){
-    let bonus = &choice.bonus;
     let lower_query: Vec<char> = query.iter().map(|qchar| qchar.to_ascii_lowercase()).collect();
-    let lower_choice: Vec<char> = choice.content.chars().map(|cchar| cchar.to_ascii_lowercase()).collect();
     let mut diagonal = Matrix::new(query_length, choice_length);
     let mut main = Matrix::new(query_length, choice_length);
 
@@ -57,9 +55,9 @@ fn compute(query: &[char], choice: &Choice, query_length: usize, choice_length: 
             GAP_INNER
         };
 
-        lower_choice.iter().enumerate().for_each(|(j, cchar)| {
+        choice.lower_content.iter().enumerate().for_each(|(j, cchar)| {
             if qchar == cchar {
-                let bonus_score = bonus[j];
+                let bonus_score = choice.bonus[j];
 
                 let current_score = if i == 0 {
                     (j as f32 * GAP_LEADING) + bonus_score
@@ -91,20 +89,19 @@ fn compute(query: &[char], choice: &Choice, query_length: usize, choice_length: 
 impl Score {
     pub fn new(query: &[char], choice: &Choice) -> Score {
         let query_length = query.len();
-        let choice_length = choice.len;
 
         if query_length == 0 {
             // empty needle
             Score { score: MIN, positions: vec![] }
-        } else if query_length == choice_length {
+        } else if query_length == choice.len {
             // We only get here if we match so lengths match they
             Score { score: MAX, positions: (0..query_length).collect() }
         } else {
-            let (main, diagonal) = compute(&query, &choice, query_length, choice_length);
+            let (main, diagonal) = compute(&query, &choice, query_length, choice.len);
 
             Score {
-                score: main[(query_length - 1, choice_length - 1)],
-                positions: positions(choice_length, query_length, main, diagonal)
+                score: main[(query_length - 1, choice.len - 1)],
+                positions: positions(choice.len, query_length, main, diagonal)
             }
         }
     }
