@@ -1,6 +1,6 @@
 [package]
 name = "fozzie"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Nick Pezza <npezza93@gmail.com>"]
 edition = "2018"
 
