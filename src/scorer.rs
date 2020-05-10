@@ -91,7 +91,7 @@ fn compute(query: &[char], choice: &Choice, query_length: usize, choice_length: 
 impl Score {
     pub fn new(query: &[char], choice: &Choice) -> Score {
         let query_length = query.len();
-        let choice_length = choice.content.chars().count();
+        let choice_length = choice.len;
 
         if query_length == 0 {
             // empty needle
@@ -281,7 +281,7 @@ mod tests {
         let choice = Choice::new("CODE_OF_CONDUCT.md".to_string());
         let query = ['c', 'o', 'd', 'e'];
 
-        b.iter(|| compute(&query, &choice, 4, choice.content.len()))
+        b.iter(|| compute(&query, &choice, 4, choice.len))
     }
 
     #[bench]
