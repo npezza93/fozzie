@@ -15,12 +15,13 @@ pub mod scorer;
 pub mod search;
 pub mod terminal;
 
+use rayon::prelude::*;
 use choice::Choice;
 use choices::Choices;
 use config::Config;
 use search::Search;
 use std::error::Error;
-use std::io::{stdin, BufRead};
+use std::io::{self, Read};
 use terminal::Terminal;
 use termion::event::Key;
 
@@ -32,10 +33,18 @@ impl App {
         let mut exit_code = 0;
 
         let mut terminal = Terminal::new()?;
+        let stdin = io::stdin();
+        let mut stdin_lock = stdin.lock();
+
+        let mut buffer = String::new();
+
+        stdin_lock.read_to_string(&mut buffer)?;
         let parsed_choices: Vec<Choice> =
-            stdin().lock().lines().map(Result::unwrap).map(|choice| {
-            Choice::new(choice)
-        }).collect();
+            buffer.
+            par_lines().
+            map(|choice| Choice::new(choice)).
+            collect();
+
         let mut search = Search::new(config.prompt);
         let mut choices = Choices::new(config.lines, &parsed_choices, config.show_scores);
 

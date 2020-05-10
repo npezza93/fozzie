@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use std::fmt;
 
 pub struct Match<'a> {
-    pub choice: &'a Choice,
+    pub choice: &'a Choice<'a>,
     scorer: Score,
 }
 
@@ -209,6 +209,6 @@ mod tests {
     }
 
     fn make_choice(choice: &str) -> Choice {
-        Choice::new(choice.to_string())
+        Choice::new(choice)
     }
 }

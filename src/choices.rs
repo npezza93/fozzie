@@ -6,7 +6,7 @@ use crate::matcher::Match;
 use crate::terminal::Terminal;
 
 pub struct Choices<'a> {
-    choices: &'a [Choice],
+    choices: &'a [Choice<'a>],
     selected: usize,
     max_choices: usize,
     matches: Vec<Match<'a>>,
@@ -142,10 +142,10 @@ mod tests {
     #[test]
     fn test_new() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
-            Choice::new("baz".to_string()),
-            Choice::new("boo".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
+            Choice::new("baz"),
+            Choice::new("boo"),
         ];
         let choices = Choices::new(4, &input, false);
 
@@ -153,17 +153,17 @@ mod tests {
         assert_eq!(0, choices.selected);
         assert_eq!(
             vec!["foo", "bar", "baz", "boo"],
-            choices.choices.iter().map(|choice| choice.content.clone()).collect::<Vec<String>>(),
+            choices.choices.iter().map(|choice| choice.content).collect::<Vec<&str>>(),
         );
     }
 
     #[test]
     fn test_new_max_choices() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
-            Choice::new("baz".to_string()),
-            Choice::new("boo".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
+            Choice::new("baz"),
+            Choice::new("boo"),
         ];
         let choices = Choices::new(2, &input, false);
 
@@ -173,8 +173,7 @@ mod tests {
     #[test]
     fn test_filter() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"), Choice::new("bar"),
         ];
         let mut choices = Choices::new(4, &input, false);
 
@@ -193,16 +192,16 @@ mod tests {
             choices
                 .matches
                 .iter()
-                .map(|matcher| matcher.choice.content.clone())
-                .collect::<Vec<String>>()
+                .map(|matcher| matcher.choice.content)
+                .collect::<Vec<&str>>()
         );
     }
 
     #[test]
     fn test_previous_when_wrapping() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
         ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
@@ -223,8 +222,8 @@ mod tests {
     #[test]
     fn test_previous() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
         ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
@@ -246,8 +245,8 @@ mod tests {
     #[test]
     fn test_next_when_wrapping() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
         ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
@@ -269,8 +268,8 @@ mod tests {
     #[test]
     fn test_next() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
         ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
@@ -291,8 +290,8 @@ mod tests {
     #[test]
     fn test_cancel() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
         ];
         let choices = Choices::new(4, &input, false);
 
@@ -305,8 +304,8 @@ mod tests {
     #[test]
     fn test_current_match() {
         let input: Vec<Choice> = vec![
-            Choice::new("foo".to_string()),
-            Choice::new("bar".to_string()),
+            Choice::new("foo"),
+            Choice::new("bar"),
         ];
         let mut choices = Choices::new(4, &input, false);
         choices.filter(&[]);
@@ -317,16 +316,16 @@ mod tests {
     #[bench]
     fn bench_filtering(b: &mut test::Bencher) {
         let choices: Vec<Choice> = vec![
-            Choice::new("CODE_OF_CONDUCT.md".to_string()),
-            Choice::new("Cargo.lock".to_string()),
-            Choice::new("Cargo.toml".to_string()),
-            Choice::new("LICENSE".to_string()),
-            Choice::new("README.md".to_string()),
-            Choice::new("benches/choices.rs".to_string()),
-            Choice::new("benches/drawing.rs".to_string()),
-            Choice::new("benches/matching.rs".to_string()),
-            Choice::new("benches/scoring.rs".to_string()),
-            Choice::new("src/bonus.rs".to_string())
+            Choice::new("CODE_OF_CONDUCT.md"),
+            Choice::new("Cargo.lock"),
+            Choice::new("Cargo.toml"),
+            Choice::new("LICENSE"),
+            Choice::new("README.md"),
+            Choice::new("benches/choices.rs"),
+            Choice::new("benches/drawing.rs"),
+            Choice::new("benches/matching.rs"),
+            Choice::new("benches/scoring.rs"),
+            Choice::new("src/bonus.rs")
         ];
         let query = ['c', 'o', 'd', 'e'];
 

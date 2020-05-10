@@ -278,7 +278,7 @@ mod tests {
 
     #[bench]
     fn bench_normal_scoring(b: &mut test::Bencher) {
-        let choice = Choice::new("CODE_OF_CONDUCT.md".to_string());
+        let choice = Choice::new("CODE_OF_CONDUCT.md");
         let query = ['c', 'o', 'd', 'e'];
 
         b.iter(|| compute(&query, &choice, 4, choice.len))
@@ -286,7 +286,7 @@ mod tests {
 
     #[bench]
     fn bench_scoring_empty_query(b: &mut test::Bencher) {
-        let choice = Choice::new("CODE_OF_CONDUCT.md".to_string());
+        let choice = Choice::new("CODE_OF_CONDUCT.md");
         let query = [];
 
         b.iter(|| Score::new(&query, &choice))
@@ -294,7 +294,7 @@ mod tests {
 
     #[bench]
     fn bench_scoring_entire_query(b: &mut test::Bencher) {
-        let choice = Choice::new("gem".to_string());
+        let choice = Choice::new("gem");
         let query = ['g', 'e', 'm'];
 
         b.iter(|| Score::new(&query, &choice))
@@ -303,14 +303,14 @@ mod tests {
     fn score(choice: &str, query: &str) -> f32 {
         Score::new(
             &choice.chars().collect::<Vec<char>>(),
-            &Choice::new(query.to_string())
+            &Choice::new(query)
         ).score
     }
 
     fn positions(choice: &str, query: &str) -> Vec<usize> {
         Score::new(
             &choice.chars().collect::<Vec<char>>(),
-            &Choice::new(query.to_string())
+            &Choice::new(query)
         ).positions
     }
 }
