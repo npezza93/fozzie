@@ -9,6 +9,7 @@ pub struct Config {
     pub delimiter: Option<Regex>,
     pub field: Option<usize>,
     pub output: Option<usize>,
+    pub benchmark: bool,
 }
 
 impl Config {
@@ -18,11 +19,16 @@ impl Config {
         let lines       = parse_lines(&matches);
         let prompt      = value_t_or_exit!(matches, "prompt", String);
         let show_scores = matches.is_present("show-scores");
-        let query       = optional_str_value_or_exit(&matches, "query");
+        let query       = parse_query(&matches);
 
         let delimiter   = parse_delimiter(&matches);
         let field       = subcommand_usize_value_or_exit(&matches, "field");
         let output      = subcommand_usize_value_or_exit(&matches, "output");
+
+        let benchmark   = match matches.subcommand_name() {
+            Some("benchmark") => true, _ => false
+        };
+
 
         Self {
             lines,
@@ -32,6 +38,7 @@ impl Config {
             delimiter,
             field,
             output,
+            benchmark
         }
     }
 
@@ -110,6 +117,7 @@ impl Config {
             .arg(Self::query_arg())
             .arg(Self::show_scores_arg())
             .subcommand(Self::split_subcommand())
+            .subcommand(Self::benchmark_subcommand())
     }
 
     fn split_subcommand<'a>() -> App<'a, 'a> {
@@ -120,13 +128,28 @@ impl Config {
             .arg(Self::field_arg())
             .arg(Self::output_arg())
     }
+
+    fn benchmark_subcommand<'a>() -> App<'a, 'a> {
+        SubCommand::with_name("benchmark")
+            .about("Disables iteractivity to allow benchmarking")
+            .setting(AppSettings::DisableVersion)
+            .arg(Self::query_arg().required(true))
+    }
 }
 
-fn optional_str_value_or_exit(matches: &ArgMatches, field: &str) -> Option<String> {
-    if matches.is_present(field) {
-        Some(value_t_or_exit!(matches, field, String))
+fn parse_query(matches: &ArgMatches) -> Option<String> {
+    if matches.is_present("query") {
+        Some(value_t_or_exit!(matches, "query", String))
     } else {
-        None
+        if let Some(matches) = matches.subcommand_matches("benchmark") {
+            if matches.is_present("query") {
+                Some(value_t_or_exit!(matches, "query", String))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }
 

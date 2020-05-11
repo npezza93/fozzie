@@ -336,7 +336,8 @@ mod tests {
     fn make_choice(choice: &str) -> Choice {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,
-            query: None, delimiter: None, field: None, output: None
+            query: None, delimiter: None, field: None, output: None,
+            benchmark: false,
         };
 
         Choice::new(choice, &config)

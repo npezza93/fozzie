@@ -10,20 +10,20 @@ pub struct Match<'a> {
 }
 
 impl<'a> Match<'a> {
-    pub fn is_match(query: &[char], choice: &str) -> bool {
+    pub fn is_match(query: &[char], choice: &Choice) -> bool {
         // Saving the enumerator outside the iterator will ensure chars are in
         // order and will make it so we only ever go through the choice once.
-        let mut choice_chars = choice.chars();
+        let mut choice_chars = choice.searchable.chars();
 
         query.iter().all(|nchar| {
             choice_chars.any(|cchar| {
                 nchar == &cchar || nchar.to_ascii_uppercase() == cchar
-           })
+            })
         })
     }
 
     pub fn new(query: &[char], choice: &'a Choice) -> Option<Self> {
-        if Self::is_match(&query, &choice.searchable) {
+        if Self::is_match(&query, &choice) {
             Some(Self {
                 choice,
                 scorer: Score::new(&query, &choice),
@@ -212,7 +212,8 @@ mod tests {
     fn make_choice(choice: &str) -> Choice {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,
-            query: None, delimiter: None, field: None, output: None
+            query: None, delimiter: None, field: None, output: None,
+            benchmark: false,
         };
 
         Choice::new(choice, &config)
