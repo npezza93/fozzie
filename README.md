@@ -13,10 +13,17 @@ fozzie is a simple and quick fuzzy text selector for the terminal.
 
 ##### macOS and Linux
 
-Go to the releases page, download the tar file, and place the executable in your path.
+```
+cargo install fozzie
+```
+
+Binaries are also available on the releases page of the repo.
+Download the tar file, and place the executable in your path.
 
 ##### From source
 ```
+git clone https://github.com/npezza93/fozzie
+cd fozzie
 cargo build --release
 fd | ./target/release/fozzie
 ```
