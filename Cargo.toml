@@ -3,6 +3,9 @@ name = "fozzie"
 version = "1.2.0"
 authors = ["Nick Pezza <npezza93@gmail.com>"]
 edition = "2018"
+license-file = "LICENSE"
+description = "A quick fuzzy finder for the terminal"
+repository = "https://github.com/npezza93/fozzie"
 
 [[bin]]
 name = "fozzie"
