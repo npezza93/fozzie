@@ -16,7 +16,6 @@ pub mod scorer;
 pub mod search;
 pub mod terminal;
 
-use rayon::prelude::*;
 use choice::Choice;
 use choices::Choices;
 use config::Config;
@@ -42,7 +41,7 @@ impl App {
         stdin_lock.read_to_string(&mut buffer)?;
         let parsed_choices: Vec<Choice> =
             buffer.
-            par_lines().
+            lines().
             map(|choice| Choice::new(choice, &config)).
             collect();
 

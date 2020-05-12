@@ -183,7 +183,7 @@ mod tests {
 
     #[bench]
     fn bench_matching(b: &mut test::Bencher) {
-        let choice = "Gemfile";
+        let choice = make_choice("Gemfile");
         let query = ['g', 'e', 'm'];
 
         b.iter(|| Match::is_match(&query, &choice))
@@ -191,7 +191,7 @@ mod tests {
 
     #[bench]
     fn bench_matching_uppercase(b: &mut test::Bencher) {
-        let choice = "Gemfile";
+        let choice = make_choice("Gemfile");
         let query = ['G', 'e', 'm'];
 
         b.iter(|| Match::is_match(&query, &choice))
