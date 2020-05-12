@@ -57,8 +57,14 @@ impl<'a> Match<'a> {
     }
 
     fn draw_highlights(&self) -> String {
-        self.choice
-            .searchable
+        let content =
+            if let Some((w, _h)) = term_size::dimensions() {
+                &self.choice.searchable[0..w.min(self.choice.searchable_len)]
+            } else {
+                self.choice.searchable
+            };
+
+        content
             .chars()
             .enumerate()
             .map(|(i, cchar)| {
