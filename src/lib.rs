@@ -38,6 +38,12 @@ impl App {
 
         let mut buffer = String::new();
 
+       if termion::is_tty(&stdin_lock) {
+           clap::Error::with_description(
+               "No input given", clap::ErrorKind::MissingRequiredArgument
+           ).exit();
+        }
+
         stdin_lock.read_to_string(&mut buffer)?;
         let parsed_choices: Vec<Choice> =
             buffer.
