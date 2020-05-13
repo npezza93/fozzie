@@ -25,7 +25,7 @@ Download the tar file, and place the executable in your path.
 git clone https://github.com/npezza93/fozzie
 cd fozzie
 cargo build --release
-fd | ./target/release/fozzie
+find. -type f | ./target/release/fozzie
 ```
 
 ### Usage
