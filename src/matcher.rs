@@ -37,7 +37,7 @@ impl<'a> Match<'a> {
         let mut drawn = self.draw_highlights();
 
         if show_scores {
-            let current_score = self.score();
+            let current_score = self.scorer.score;
             if current_score != MIN {
                 drawn = format!("({:5.2}) {}", current_score, drawn);
             } else {
@@ -50,10 +50,6 @@ impl<'a> Match<'a> {
         } else {
             drawn
         }
-    }
-
-    fn score(&self) -> f32 {
-        self.scorer.score
     }
 
     fn draw_highlights(&self) -> String {
@@ -92,14 +88,14 @@ impl<'a> Ord for Match<'a> {
 
 impl<'a> PartialOrd for Match<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.score().partial_cmp(&self.score())
+        other.scorer.score.partial_cmp(&self.scorer.score)
     }
 }
 
 impl<'a> Eq for Match<'a> {}
 impl<'a> PartialEq for Match<'a> {
     fn eq(&self, other: &Self) -> bool {
-        other.score() == self.score()
+        other.scorer.score == self.scorer.score
     }
 }
 

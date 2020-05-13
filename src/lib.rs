@@ -24,6 +24,7 @@ use std::error::Error;
 use std::io::{self, Read};
 use terminal::Terminal;
 use termion::event::Key;
+use rayon::prelude::*;
 
 pub struct App {}
 
@@ -47,7 +48,7 @@ impl App {
         stdin_lock.read_to_string(&mut buffer)?;
         let parsed_choices: Vec<Choice> =
             buffer.
-            lines().
+            par_lines().
             map(|choice| Choice::new(choice, &config)).
             collect();
 
