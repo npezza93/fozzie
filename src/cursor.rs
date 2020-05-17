@@ -6,6 +6,10 @@ pub fn up(n: usize) -> String {
     format!("\x1B[{}A", n)
 }
 
+pub fn down(n: usize) -> String {
+    format!("\x1B[{}B", n)
+}
+
 pub fn left() -> &'static str {
     "\x1B[1D"
 }

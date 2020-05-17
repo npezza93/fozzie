@@ -5,14 +5,17 @@ pub struct Search {
     pub query: Vec<char>,
     position: usize,
     prompt: String,
+    lines: usize,
+    reverse: bool,
 }
 
 impl Search {
-    pub fn new<S: Into<String>>(prompt: S) -> Search {
+    pub fn new<S: Into<String>>(prompt: S, lines: usize, reverse: bool) -> Search {
         Search {
             query: vec![],
             position: 0,
             prompt: prompt.into(),
+            lines, reverse,
         }
     }
 
@@ -20,13 +23,19 @@ impl Search {
         let query: String = self.query.iter().collect();
         let current_col = self.prompt.chars().count() + self.position + 1;
 
-        format!(
+        let prompt = format!(
             "{}\r{}{}{}",
-            cursor::clear_line(),
-            self.prompt,
-            query,
-            cursor::col(current_col)
-        )
+            cursor::clear_line(), self.prompt, query, cursor::col(current_col)
+        );
+
+        let prompt =
+        if self.reverse {
+            format!("{}{}", cursor::down(self.lines + 1), prompt)
+        } else {
+            prompt
+        };
+
+        prompt
     }
 
     pub fn keypress(&mut self, character: char) -> String {

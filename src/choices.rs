@@ -10,29 +10,35 @@ pub struct Choices<'a> {
     max_choices: usize,
     matches: Vec<Match<'a>>,
     show_scores: bool,
+    reverse: bool,
 }
 
 impl<'a> Choices<'a> {
     const OFFSET: usize = 1;
 
-    pub fn new(max_choices: usize, choices: &'a [Choice], show_scores: bool) -> Choices<'a> {
+    pub fn new(max_choices: usize, choices: &'a [Choice], show_scores: bool, reverse: bool) -> Choices<'a> {
         Choices {
             selected: 0,
             matches: vec![],
             choices,
             max_choices,
             show_scores,
+            reverse,
         }
     }
 
     pub fn initial_draw(&mut self, terminal: &mut Terminal) {
         self.filter_choices(&[]);
 
-        terminal.print(&format!(
-            "\r\n{}{}\r",
-            self.draw_choices(),
-            cursor::up(self.max_choices())
-        ));
+        if self.reverse {
+            terminal.print(&format!("{}\r\n", self.draw_choices()));
+        } else {
+            terminal.print(&format!(
+                "\r\n{}{}\r",
+                self.draw_choices(),
+                cursor::up(self.max_choices())
+            ));
+        }
     }
 
     pub fn previous(&mut self) -> String {
@@ -84,13 +90,29 @@ impl<'a> Choices<'a> {
     }
 
     fn draw(&self) -> String {
-        format!(
-            "{}\r\n{}\r{}{}",
-            cursor::save_position(),
-            cursor::clear_screen_down(),
-            self.draw_choices(),
-            cursor::restore_position(),
-        )
+        if self.reverse {
+            let drawn = (1..self.max_choices).into_iter().map(|_i| {
+                format!("\r{}{}", cursor::clear_line(), cursor::up(1))
+            }).collect::<Vec<String>>().join("");
+
+            format!(
+                "{}{}{}{}{}{}",
+                cursor::save_position(),
+                cursor::up(1),
+                drawn,
+                cursor::clear_line(),
+                self.draw_choices(),
+                cursor::restore_position(),
+            )
+        } else {
+            format!(
+                "{}\r\n{}\r{}{}",
+                cursor::save_position(),
+                cursor::clear_screen_down(),
+                self.draw_choices(),
+                cursor::restore_position(),
+            )
+        }
     }
 
     fn last_index(&self) -> usize {
@@ -341,7 +363,7 @@ mod tests {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,
             query: None, delimiter: None, field: None, output: None,
-            benchmark: false,
+            benchmark: false, reverse: false,
         };
 
         Choice::new(choice, &config)

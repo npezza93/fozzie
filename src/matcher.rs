@@ -211,7 +211,7 @@ mod tests {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,
             query: None, delimiter: None, field: None, output: None,
-            benchmark: false,
+            benchmark: false, reverse: false,
         };
 
         Choice::new(choice, &config)

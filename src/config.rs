@@ -10,6 +10,7 @@ pub struct Config {
     pub field: Option<usize>,
     pub output: Option<usize>,
     pub benchmark: bool,
+    pub reverse: bool,
 }
 
 impl Config {
@@ -19,6 +20,7 @@ impl Config {
         let lines       = parse_lines(&matches);
         let prompt      = value_t_or_exit!(matches, "prompt", String);
         let show_scores = matches.is_present("show-scores");
+        let reverse     = matches.is_present("reverse");
         let query       = parse_query(&matches);
 
         let delimiter   = parse_delimiter(&matches);
@@ -34,6 +36,7 @@ impl Config {
             lines,
             prompt,
             show_scores,
+            reverse,
             query,
             delimiter,
             field,
@@ -67,6 +70,13 @@ impl Config {
             .short("s")
             .long("show-scores")
             .help("Show the scores of each match")
+    }
+
+    fn reverse_arg<'a>() -> Arg<'a, 'a> {
+        Arg::with_name("reverse")
+            .short("r")
+            .long("reverse")
+        .help("Shows the search at the bottom")
     }
 
     fn query_arg<'a>() -> Arg<'a, 'a> {
@@ -115,6 +125,7 @@ impl Config {
             .arg(Self::lines_arg())
             .arg(Self::prompt_arg())
             .arg(Self::query_arg())
+            .arg(Self::reverse_arg())
             .arg(Self::show_scores_arg())
             .subcommand(Self::split_subcommand())
             .subcommand(Self::benchmark_subcommand())

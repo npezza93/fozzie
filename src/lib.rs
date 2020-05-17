@@ -52,8 +52,8 @@ impl App {
             map(|choice| Choice::new(choice, &config)).
             collect();
 
-        let mut search = Search::new(config.prompt);
-        let mut choices = Choices::new(config.lines, &parsed_choices, config.show_scores);
+        let mut search = Search::new(config.prompt, config.lines, config.reverse);
+        let mut choices = Choices::new(config.lines, &parsed_choices, config.show_scores, config.reverse);
 
         if config.benchmark {
             let query = config.query.unwrap().chars().collect::<Vec<char>>();
