@@ -1,5 +1,6 @@
 use crate::choice::Choice;
 use crate::color;
+use crate::cursor;
 use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
 use std::fmt;
@@ -46,19 +47,14 @@ impl<'a> Match<'a> {
         }
 
         if selected {
-            color::inverse(&drawn)
+            cursor::nowrap(&color::inverse(&drawn))
         } else {
-            drawn
+            cursor::nowrap(&drawn)
         }
     }
 
     fn draw_highlights(&self) -> String {
-        let content =
-            if let Some((w, _h)) = term_size::dimensions() {
-                &self.choice.searchable[0..w.min(self.choice.searchable_len)]
-            } else {
-                self.choice.searchable
-            };
+        let content = self.choice.searchable;
 
         content
             .chars()
@@ -133,7 +129,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("", &choice).unwrap();
 
-        assert_eq!("foo", matcher.draw(false, false));
+        assert_eq!("\x1B[?7lfoo\x1B[?7h", matcher.draw(false, false));
     }
 
     #[test]
@@ -148,7 +144,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("", &choice).unwrap();
 
-        assert_eq!("\x1B[7mfoo\x1B[27m", matcher.draw(true, false));
+        assert_eq!("\x1B[?7l\x1B[7mfoo\x1B[27m\x1B[?7h", matcher.draw(true, false));
     }
 
     #[test]
@@ -156,7 +152,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("f", &choice).unwrap();
 
-        assert_eq!("\x1B[33mf\x1B[39moo", matcher.draw(false, false));
+        assert_eq!("\x1B[?7l\x1B[33mf\x1B[39moo\x1B[?7h", matcher.draw(false, false));
     }
 
     #[test]
@@ -164,7 +160,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("f", &choice).unwrap();
 
-        assert_eq!("\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m", matcher.draw(true, false));
+        assert_eq!("\x1B[?7l\x1B[7m\x1B[33mf\x1B[39moo\x1B[27m\x1B[?7h", matcher.draw(true, false));
     }
 
     #[test]
@@ -172,7 +168,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("", &choice).unwrap();
 
-        assert_eq!("(     ) foo", matcher.draw(false, true))
+        assert_eq!("\x1B[?7l(     ) foo\x1B[?7h", matcher.draw(false, true))
     }
 
     #[test]
@@ -180,7 +176,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("f", &choice).unwrap();
 
-        assert_eq!("( 0.89) \u{1b}[33mf\u{1b}[39moo", matcher.draw(false, true))
+        assert_eq!("\x1B[?7l( 0.89) \u{1b}[33mf\u{1b}[39moo\x1B[?7h", matcher.draw(false, true))
     }
 
     #[bench]

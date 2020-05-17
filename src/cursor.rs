@@ -30,6 +30,11 @@ pub fn restore_position() -> &'static str {
     "\x1B8"
 }
 
+pub fn nowrap(test: &str) -> String {
+    format!("\x1B[?7l{}\x1B[?7h", test)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,5 +77,10 @@ mod tests {
     #[test]
     fn test_restore_position() {
         assert_eq!("\x1B8", restore_position());
+    }
+
+    #[test]
+    fn test_nowrap() {
+        assert_eq!("\x1B[?7lthing\x1B[?7h", nowrap("thing"));
     }
 }

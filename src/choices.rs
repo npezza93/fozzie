@@ -179,10 +179,11 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}\r\n{}\r{}\n\rbar{}",
+                "{}\r\n{}\r{}\n\r{}{}",
                 cursor::save_position(),
                 cursor::clear_screen_down(),
-                color::inverse("foo"),
+                cursor::nowrap(&color::inverse("foo")),
+                cursor::nowrap("bar"),
                 cursor::restore_position()
             ),
             choices.filter(&[])
@@ -208,10 +209,11 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}\r\n{}\rfoo\n\r{}{}",
+                "{}\r\n{}\r{}\n\r{}{}",
                 cursor::save_position(),
                 cursor::clear_screen_down(),
-                color::inverse("bar"),
+                cursor::nowrap("foo"),
+                cursor::nowrap(&color::inverse("bar")),
                 cursor::restore_position(),
             ),
             choices.previous()
@@ -231,10 +233,11 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}\r\n{}\r{}\n\rbar{}",
+                "{}\r\n{}\r{}\n\r{}{}",
                 cursor::save_position(),
                 cursor::clear_screen_down(),
-                color::inverse("foo"),
+                cursor::nowrap(&color::inverse("foo")),
+                cursor::nowrap("bar"),
                 cursor::restore_position(),
             ),
             choices.previous()
@@ -254,10 +257,11 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}\r\n{}\r{}\n\rbar{}",
+                "{}\r\n{}\r{}\n\r{}{}",
                 cursor::save_position(),
                 cursor::clear_screen_down(),
-                color::inverse("foo"),
+                cursor::nowrap(&color::inverse("foo")),
+                cursor::nowrap("bar"),
                 cursor::restore_position(),
             ),
             choices.next()
@@ -276,10 +280,11 @@ mod tests {
 
         assert_eq!(
             format!(
-                "{}\r\n{}\rfoo\n\r{}{}",
+                "{}\r\n{}\r{}\n\r{}{}",
                 cursor::save_position(),
                 cursor::clear_screen_down(),
-                color::inverse("bar"),
+                cursor::nowrap("foo"),
+                cursor::nowrap(&color::inverse("bar")),
                 cursor::restore_position(),
             ),
             choices.next()
