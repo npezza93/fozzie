@@ -141,16 +141,14 @@ impl Config {
 fn parse_query(matches: &ArgMatches) -> Option<String> {
     if matches.is_present("query") {
         Some(value_t_or_exit!(matches, "query", String))
-    } else {
-        if let Some(matches) = matches.subcommand_matches("benchmark") {
-            if matches.is_present("query") {
-                Some(value_t_or_exit!(matches, "query", String))
-            } else {
-                None
-            }
+    } else if let Some(matches) = matches.subcommand_matches("benchmark") {
+        if matches.is_present("query") {
+            Some(value_t_or_exit!(matches, "query", String))
         } else {
             None
         }
+    } else {
+        None
     }
 }
 

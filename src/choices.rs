@@ -57,7 +57,7 @@ impl<'a> Choices<'a> {
 
     pub fn select(&self, terminal: &mut Terminal) {
         terminal.print(&format!("\r{}", cursor::clear_screen_down()));
-        if self.matches.len() > 0 {
+        if !self.matches.is_empty() {
             println!("{}", self.current_match().returnable);
         }
     }

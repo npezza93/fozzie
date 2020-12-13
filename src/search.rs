@@ -241,7 +241,7 @@ mod tests {
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
 
-        assert_eq!(format!("{}", cursor::left()), search.left().unwrap());
+        assert_eq!(cursor::left().to_string(), search.left().unwrap());
         assert_eq!(0, search.position);
     }
 
@@ -261,7 +261,7 @@ mod tests {
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
 
-        assert_eq!(format!("{}", cursor::right()), search.right().unwrap());
+        assert_eq!(cursor::right().to_string(), search.right().unwrap());
         assert_eq!(2, search.position);
     }
 

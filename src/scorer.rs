@@ -16,13 +16,13 @@ pub struct Score {
 }
 
 fn positions(choice_length: usize, query_length: usize, main: Matrix, diagonal: Matrix) -> Vec<usize> {
-    let mut positions = vec![0 as usize; query_length];
+    let mut positions = vec![0_usize; query_length];
 
     let mut match_required = false;
     let mut choice_index = choice_length - 1;
 
     for query_index in (0..query_length).rev() {
-        while choice_index > (0 as usize) {
+        while choice_index > 0_usize {
             let d = diagonal[(query_index, choice_index)];
             let m = main[(query_index, choice_index)];
 
