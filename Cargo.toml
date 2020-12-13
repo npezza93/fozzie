@@ -1,7 +1,7 @@
 [package]
 name = "fozzie"
 version = "1.3.2"
-authors = ["Nick Pezza <npezza93@gmail.com>"]
+authors = ["Nick Pezza <pezza@hey.com>"]
 edition = "2018"
 license-file = "LICENSE"
 description = "A quick fuzzy finder for the terminal"
