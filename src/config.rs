@@ -1,4 +1,5 @@
 use regex::Regex;
+use terminal_size::{Width, Height, terminal_size};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, Error};
 
 pub struct Config {
@@ -175,8 +176,8 @@ fn parse_lines(matches: &ArgMatches) -> usize {
     if lines < 1 {
         Error::value_validation_auto(format!("The argument '{}' must be greater than 0", "lines")).exit();
     }
-    if let Some((_w, h)) = term_size::dimensions() {
-        if h <= lines {
+    if let Some((Width(_w), Height(h))) = terminal_size() {
+        if usize::from(h) <= lines {
             Error::value_validation_auto(format!("The argument '{}' must be less than {}", "lines", h)).exit();
         }
     }

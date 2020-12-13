@@ -1,7 +1,7 @@
 #![feature(test)]
 #[macro_use]
 extern crate clap;
-extern crate term_size;
+extern crate terminal_size;
 extern crate test;
 
 pub mod bonus;
