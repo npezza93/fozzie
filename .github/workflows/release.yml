@@ -16,7 +16,7 @@ jobs:
           # Apparently, this is the right way to get a tag name. Really?
           #
           # See: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
-          echo "::set-env name=FOZZIE_VERSION::${GITHUB_REF#refs/tags/}"
+          echo "FOZZIE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "version is: ${{ env.FOZZIE_VERSION }}"
 
       - name: Create GitHub release
@@ -50,7 +50,7 @@ jobs:
         build: [linux, macos]
         include:
         - build: linux
-          os: ubuntu-18.04
+          os: ubuntu-latest
           rust: nightly
           target: x86_64-unknown-linux-musl
         - build: macos
@@ -82,10 +82,10 @@ jobs:
       shell: bash
       run: |
         release_upload_url="$(cat artifacts/release-upload-url)"
-        echo "::set-env name=RELEASE_UPLOAD_URL::$release_upload_url"
+        echo "RELEASE_UPLOAD_URL=$release_upload_url" >> $GITHUB_ENV
         echo "release upload url: $RELEASE_UPLOAD_URL"
         release_version="$(cat artifacts/release-version)"
-        echo "::set-env name=RELEASE_VERSION::$release_version"
+        echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
         echo "release version: $RELEASE_VERSION"
 
     - name: Build release binary
@@ -101,7 +101,7 @@ jobs:
         cp target/${{ matrix.target }}/release/{fozzie.bash,fozzie.fish,_fozzie} $name/complete
         tar czvf $name.tar.gz $name
 
-        echo "::set-env name=ASSET::$name.tar.gz"
+        echo "ASSET=$name.tar.gz" >> $GITHUB_ENV
 
     - name: Upload release archive
       uses: actions/upload-release-asset@v1.0.1
