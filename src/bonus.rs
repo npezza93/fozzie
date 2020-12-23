@@ -1,7 +1,7 @@
 pub const SLASH: f32 = 0.9;
-pub const WORD: f32 = 0.85;
+pub const WORD: f32 = 0.87;
 pub const DOT: f32 = 0.6;
-pub const CAPITAL: f32 = 0.7;
+pub const CAPITAL: f32 = 0.68;
 
 pub fn compute(choice_chars: &[char]) -> Vec<f32> {
     let mut last_char = '/';
@@ -48,7 +48,7 @@ mod tests {
         );
         assert_eq!(
             compute(&"aTestString".chars().collect::<Vec<char>>()),
-            vec![0.9, 0.7, 0.0, 0.0, 0.0, 0.7, 0.0, 0.0, 0.0, 0.0, 0.0]
+            vec![0.9, 0.68, 0.0, 0.0, 0.0, 0.68, 0.0, 0.0, 0.0, 0.0, 0.0]
         );
     }
 }
