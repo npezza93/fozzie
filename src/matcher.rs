@@ -3,7 +3,9 @@ use crate::color;
 use crate::cursor;
 use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
-use std::fmt;
+use std::{fmt, cmp};
+
+use terminal_size::{Width, Height, terminal_size};
 
 pub struct Match<'a> {
     pub choice: &'a Choice<'a>,
@@ -56,8 +58,16 @@ impl<'a> Match<'a> {
     fn draw_highlights(&self) -> String {
         let content = self.choice.searchable;
 
-        content
-            .chars()
+        let characters;
+        if let Some((Width(w), Height(_h))) = terminal_size() {
+            let length = cmp::min(content.chars().count(), usize::from(w));
+
+            characters = content[0..length].chars();
+        } else {
+            characters = content.chars();
+        }
+
+        characters
             .enumerate()
             .map(|(i, cchar)| {
                 if self.scorer.positions.contains(&i) {
