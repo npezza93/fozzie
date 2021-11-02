@@ -26,10 +26,10 @@ impl<'a> Match<'a> {
     }
 
     pub fn new(query: &[char], choice: &'a Choice) -> Option<Self> {
-        if Self::is_match(&query, &choice) {
+        if Self::is_match(query, choice) {
             Some(Self {
                 choice,
-                scorer: Score::new(&query, &choice),
+                scorer: Score::new(query, choice),
             })
         } else {
             None
@@ -88,7 +88,7 @@ impl<'a> fmt::Display for Match<'a> {
 
 impl<'a> Ord for Match<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(&other).unwrap()
+        self.partial_cmp(other).unwrap()
     }
 }
 

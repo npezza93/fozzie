@@ -96,7 +96,7 @@ impl App {
                         break;
                     }
                     Key::Char('\t') => {
-                        terminal.print(&search.set_query(&choices.current_match().searchable));
+                        terminal.print(&search.set_query(choices.current_match().searchable));
                         terminal.print(&choices.filter(&search.query));
                     }
                     Key::Char(c) => {

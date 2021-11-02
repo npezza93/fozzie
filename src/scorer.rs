@@ -97,7 +97,7 @@ impl Score {
             // We only get here if we match so lengths match they
             Score { score: MAX, positions: (0..query_length).collect() }
         } else {
-            let (main, diagonal) = compute(&query, &choice, query_length, choice.searchable_len);
+            let (main, diagonal) = compute(query, choice, query_length, choice.searchable_len);
 
             Score {
                 score: main[(query_length - 1, choice.searchable_len - 1)],

@@ -63,7 +63,7 @@ impl<'a> Choices<'a> {
     }
 
     pub fn current_match(&self) -> &Choice {
-        &self.matches[self.selected].choice
+        self.matches[self.selected].choice
     }
 
     pub fn cancel(&self) -> String {
@@ -71,7 +71,7 @@ impl<'a> Choices<'a> {
     }
 
     pub fn filter(&mut self, query: &[char]) -> String {
-        self.filter_choices(&query);
+        self.filter_choices(query);
         self.draw()
     }
 
@@ -80,7 +80,7 @@ impl<'a> Choices<'a> {
         self.matches = self
             .choices
             .par_iter()
-            .filter_map(|choice| Match::new(&query, &choice))
+            .filter_map(|choice| Match::new(query, choice))
             .collect::<Vec<Match<'a>>>();
         self.matches.par_sort();
     }

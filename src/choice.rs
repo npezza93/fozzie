@@ -21,12 +21,12 @@ impl<'a> Choice<'a> {
                     None => searchable
                 };
 
-                let (bonus, searchable_len, lower_searchable) = parse_searchable(&searchable);
+                let (bonus, searchable_len, lower_searchable) = parse_searchable(searchable);
 
                 Choice { searchable, returnable, bonus, searchable_len, lower_searchable }
             },
             None => {
-                let (bonus, searchable_len, lower_searchable) = parse_searchable(&content);
+                let (bonus, searchable_len, lower_searchable) = parse_searchable(content);
 
                 Choice { searchable: content, returnable: content, bonus, searchable_len, lower_searchable }
             }
