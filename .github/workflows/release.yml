@@ -57,6 +57,10 @@ jobs:
           os: macos-11
           rust: nightly
           target: x86_64-apple-darwin
+        - build: macos
+          os: macos-11
+          rust: nightly
+          target: aarch64-apple-darwin
 
     steps:
     - name: Checkout repository
