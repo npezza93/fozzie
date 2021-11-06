@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux, macos]
+        build: [linux, macos, macos-arm]
         include:
         - build: linux
           os: ubuntu-latest
@@ -57,7 +57,7 @@ jobs:
           os: macos-11
           rust: nightly
           target: x86_64-apple-darwin
-        - build: macos
+        - build: macos-arm
           os: macos-11
           rust: nightly
           target: aarch64-apple-darwin
