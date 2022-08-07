@@ -186,7 +186,7 @@ mod tests {
         let choice = make_choice("foo");
         let matcher = new_match("f", &choice).unwrap();
 
-        assert_eq!("\x1B[?7l( 0.89) \u{1b}[33mf\u{1b}[39moo\x1B[?7h", matcher.draw(false, true))
+        assert_eq!("\x1B[?7l( 0.99) \u{1b}[33mf\u{1b}[39moo\x1B[?7h", matcher.draw(false, true))
     }
 
     #[bench]

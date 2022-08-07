@@ -159,41 +159,46 @@ mod tests {
     }
 
     #[test]
+    fn prioritizes_file_name_over_dir() {
+        assert!(score("appcontroller", "app/controllers/application_controller.rb") > score("appcontroller", "app/controllers/jobs_controller.rb"));
+    }
+
+    #[test]
     fn score_gaps_test() {
-        assert_eq!(GAP_LEADING, score("a", "*a"));
-        assert_eq!(GAP_LEADING * 2.0, score("a", "*ba"));
-        assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING, score("a", "**a*"));
-        assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING * 2.0, score("a", "**a**"));
-        assert_eq!(GAP_LEADING * 2.0 + MATCH_CONSECUTIVE + GAP_TRAILING * 2.0, score("aa", "**aa**"));
-        assert_eq!(GAP_LEADING + GAP_LEADING + GAP_INNER + GAP_TRAILING + GAP_TRAILING, score("aa", "**a*a**"));
+        assert_eq!(GAP_LEADING + bonus::FILENAME, score("a", "*a"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::FILENAME, score("a", "*ba"));
+        assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING + bonus::FILENAME, score("a", "**a*"));
+        assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING * 2.0 + bonus::FILENAME, score("a", "**a**"));
+        assert_eq!(GAP_LEADING * 2.0 + MATCH_CONSECUTIVE + GAP_TRAILING * 2.0 + bonus::FILENAME, score("aa", "**aa**"));
+        approx_eq!(f32, GAP_LEADING + GAP_LEADING + GAP_INNER + GAP_TRAILING + GAP_TRAILING + 2.0 * bonus::FILENAME, score("aa", "**a*a**"), epsilon = 0.001);
     }
 
     #[test]
     fn score_consecutive_test() {
-        assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE, score("aa", "*aa"));
-        assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE * 2.0, score("aaa", "*aaa"));
-        assert_eq!(GAP_LEADING + GAP_INNER + MATCH_CONSECUTIVE, score("aaa", "*a*aa"));
+        assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE + bonus::FILENAME, score("aa", "*aa"));
+        assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE * 2.0 + bonus::FILENAME, score("aaa", "*aaa"));
+        approx_eq!(f32, GAP_LEADING + GAP_INNER + MATCH_CONSECUTIVE + 2.0 * bonus::FILENAME, score("aaa", "*a*aa"), epsilon = 0.001);
     }
 
     #[test]
     fn score_slash_test() {
-        assert_eq!(GAP_LEADING + bonus::SLASH, score("a", "/a"));
-        assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH, score("a", "*/a"));
-        assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH + MATCH_CONSECUTIVE, score("aa", "a/aa"));
+        assert_eq!(GAP_LEADING + bonus::SLASH + bonus::FILENAME, score("a", "/a"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH + bonus::FILENAME, score("a", "*/a"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::SLASH + MATCH_CONSECUTIVE + bonus::FILENAME, score("aa", "a/aa"));
     }
 
     #[test]
     fn score_capital_test() {
-        assert_eq!(GAP_LEADING + bonus::CAPITAL, score("a", "bA"));
-        assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL, score("a", "baA"));
-        assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL + MATCH_CONSECUTIVE, score("aa", "baAa"));
+        assert_eq!(GAP_LEADING + bonus::CAPITAL + bonus::FILENAME, score("a", "bA"));
+        assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL + bonus::FILENAME, score("a", "baA"));
+        approx_eq!(f32, GAP_LEADING * 2.0 + bonus::CAPITAL + MATCH_CONSECUTIVE + bonus::FILENAME, score("aa", "baAa"), epsilon = 0.001);
     }
 
     #[test]
     fn score_dot_test() {
-        assert_eq!(GAP_LEADING + bonus::DOT, score("a", ".a"));
-        assert_eq!(GAP_LEADING * 3.0 + bonus::DOT, score("a", "*a.a"));
-        assert_eq!(GAP_LEADING + GAP_INNER + bonus::DOT, score("a", "*a.a"));
+        assert_eq!(GAP_LEADING + bonus::DOT + bonus::FILENAME, score("a", ".a"));
+        assert_eq!(GAP_LEADING * 3.0 + bonus::DOT + bonus::FILENAME, score("a", "*a.a"));
+        assert_eq!(GAP_LEADING + GAP_INNER + bonus::DOT + bonus::FILENAME, score("a", "*a.a"));
     }
 
     #[test]
@@ -208,69 +213,69 @@ mod tests {
 
     #[test]
     fn positions_start_of_word_test() {
-	let positions = positions("amor", "app/models/order");
+        let positions = positions("amor", "app/models/order");
 
-	assert_eq!(0, positions[0]);
-	assert_eq!(4, positions[1]);
-	assert_eq!(11, positions[2]);
-	assert_eq!(12, positions[3]);
+        assert_eq!(0, positions[0]);
+        assert_eq!(4, positions[1]);
+        assert_eq!(11, positions[2]);
+        assert_eq!(12, positions[3]);
         assert_eq!(4, positions.len());
     }
 
     #[test]
     fn positions_no_bonuses_test() {
-	let places = positions("as", "tags");
+        let places = positions("as", "tags");
 
-	assert_eq!(1, places[0]);
-	assert_eq!(3, places[1]);
-	assert_eq!(2, places.len());
+        assert_eq!(1, places[0]);
+        assert_eq!(3, places[1]);
+        assert_eq!(2, places.len());
 
-	let places = positions("as", "examples.txt");
-	assert_eq!(2, places[0]);
-	assert_eq!(7, places[1]);
+        let places = positions("as", "examples.txt");
+        assert_eq!(2, places[0]);
+        assert_eq!(7, places[1]);
         assert_eq!(2, places.len());
     }
 
     #[test]
     fn positions_multiple_candidates_start_of_words_test() {
-	let positions = positions("abc", "a/a/b/c/c");
+        let positions = positions("abc", "a/a/b/c/c");
 
-	assert_eq!(2, positions[0]);
-	assert_eq!(4, positions[1]);
-	assert_eq!(6, positions[2]);
+        assert_eq!(2, positions[0]);
+        assert_eq!(4, positions[1]);
+        assert_eq!(8, positions[2]);
         assert_eq!(3, positions.len());
     }
 
     #[test]
     fn positions_exact_match_test() {
-	let positions = positions("foo", "foo");
+        let positions = positions("foo", "foo");
 
-	assert_eq!(0, positions[0]);
-	assert_eq!(1, positions[1]);
-	assert_eq!(2, positions[2]);
+        assert_eq!(0, positions[0]);
+        assert_eq!(1, positions[1]);
+        assert_eq!(2, positions[2]);
         assert_eq!(3, positions.len());
     }
 
     #[test]
     fn positions_test() {
-	let positions = positions("code", "CODE_OF_CONDUCT.md");
+        let positions = positions("code", "CODE_OF_CONDUCT.md");
 
-	assert_eq!(0, positions[0]);
-	assert_eq!(1, positions[1]);
-	assert_eq!(2, positions[2]);
-	assert_eq!(3, positions[3]);
+        assert_eq!(0, positions[0]);
+        assert_eq!(1, positions[1]);
+        assert_eq!(2, positions[2]);
+        assert_eq!(3, positions[3]);
         assert_eq!(4, positions.len());
     }
 
     #[test]
     fn class_positions_test() {
-	let positions = positions("class", "class_");
+        let positions = positions("class", "class_");
 
-	assert_eq!(0, positions[0]);
-	assert_eq!(1, positions[1]);
-	assert_eq!(2, positions[2]);
-	assert_eq!(3, positions[3]);
-	assert_eq!(4, positions[4]);
+        assert_eq!(0, positions[0]);
+        assert_eq!(1, positions[1]);
+        assert_eq!(2, positions[2]);
+        assert_eq!(3, positions[3]);
+        assert_eq!(4, positions[4]);
         assert_eq!(5, positions.len());
     }
 
