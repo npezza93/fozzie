@@ -48,3 +48,5 @@ It favors consecutive letters and start of word matches
 `abce` matches `abcdef` over `abc de`
 
 `test` matches `tests` over `testing`
+
+`appcont` matches `app/controllers/application_controller.rb` over `app/controllers/home_controller.rb`
