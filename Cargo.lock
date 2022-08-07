@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "fozzie"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "clap",
  "float-cmp",
