@@ -2,7 +2,7 @@
 name = "fozzie"
 version = "1.5.0"
 authors = ["Nick Pezza <pezza@hey.com>"]
-edition = "2018"
+edition = "2021"
 license-file = "LICENSE"
 description = "A quick fuzzy finder for the terminal"
 repository = "https://github.com/npezza93/fozzie"
