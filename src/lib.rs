@@ -75,10 +75,9 @@ impl App {
                         choices.select(&mut terminal);
                         break;
                     }
-                    Key::Char('\t') => {
-                        terminal.print(&search.set_query(choices.current_match().searchable));
-                        terminal.print(&choices.filter(&search.query));
-                    }
+                    Key::Char('\t') => complete_query(&mut search, &mut choices, |text| {
+                        terminal.print(text);
+                    }),
                     Key::Char(c) => {
                         terminal.print(&search.keypress(c));
                         terminal.print(&choices.filter(&search.query));
@@ -124,6 +123,17 @@ impl App {
     }
 }
 
+fn complete_query<F: FnMut(&str)>(
+    search: &mut Search,
+    choices: &mut Choices,
+    mut print: F,
+) {
+    if let Some(choice) = choices.selected_choice() {
+        print(&search.set_query(choice.searchable));
+        print(&choices.filter(&search.query));
+    }
+}
+
 fn clear_query<F: FnMut(&str)>(
     search: &mut Search,
     choices: &mut Choices,
@@ -166,6 +176,63 @@ mod tests {
             query: None, delimiter: None, field: None, output: None,
             benchmark: false,
         }
+    }
+
+    #[test]
+    fn tab_without_matches_preserves_query_and_cursor() {
+        let config = config();
+        let input = vec![Choice::new("alpha", &config)];
+        let mut choices = Choices::new(2, &input, false);
+        let mut search = Search::new("> ");
+        search.set_query("zz");
+        search.left();
+        choices.filter(&search.query);
+        let before = search.draw();
+
+        for _ in 0..2 {
+            complete_query(&mut search, &mut choices, |_| panic!("unexpected redraw"));
+        }
+
+        assert_eq!(search.draw(), before);
+        assert!(choices.selected_choice().is_none());
+        search.keypress('x');
+        assert_eq!(search.query, vec!['z', 'x', 'z']);
+    }
+
+    #[test]
+    fn tab_with_empty_input_is_a_noop() {
+        let mut choices = Choices::new(2, &[], false);
+        let mut search = Search::new("> ");
+        choices.filter(&search.query);
+        let before = search.draw();
+
+        for _ in 0..2 {
+            complete_query(&mut search, &mut choices, |_| panic!("unexpected redraw"));
+        }
+
+        assert_eq!(search.draw(), before);
+        assert!(choices.selected_choice().is_none());
+    }
+
+    #[test]
+    fn tab_completes_the_selected_match_and_refreshes_results() {
+        let config = config();
+        let input = vec![Choice::new("alpha", &config), Choice::new("beta", &config)];
+        let mut choices = Choices::new(2, &input, false);
+        let mut search = Search::new("> ");
+        choices.filter(&search.query);
+        choices.select_next();
+        let mut redraws = Vec::new();
+
+        complete_query(&mut search, &mut choices, |text| redraws.push(text.to_owned()));
+
+        assert_eq!(search.query, vec!['b', 'e', 't', 'a']);
+        assert_eq!(choices.current_match().searchable, "beta");
+        assert_eq!(redraws.len(), 2);
+        assert_eq!(redraws[0], search.draw());
+        assert_eq!(redraws[1], choices.filter(&search.query));
+        search.keypress('x');
+        assert_eq!(search.query, vec!['b', 'e', 't', 'a', 'x']);
     }
 
     #[test]
