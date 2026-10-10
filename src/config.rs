@@ -14,7 +14,14 @@ pub struct Config {
 }
 
 impl Config {
+    /// Parse the process command-line arguments. Kept for existing library callers.
+    // A Default implementation must not parse arguments or exit the process.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
+        Self::from_args()
+    }
+
+    pub fn from_args() -> Self {
         Self::from_matches(&Self::menu().get_matches()).unwrap_or_else(|error| error.exit())
     }
 

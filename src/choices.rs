@@ -45,7 +45,15 @@ impl<'a> Choices<'a> {
         self.draw()
     }
 
+    /// Move the selection forward and redraw, wrapping at the last match.
+    /// Kept for existing library callers; prefer `select_next` in new code.
+    // Cyclic UI navigation returns a redraw String, not Iterator::next's Option<Item>.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> String {
+        self.select_next()
+    }
+
+    pub fn select_next(&mut self) -> String {
         if self.selected == self.last_index() {
             self.selected = 0;
         } else {
@@ -62,7 +70,7 @@ impl<'a> Choices<'a> {
         }
     }
 
-    pub fn current_match(&self) -> &Choice {
+    pub fn current_match(&self) -> &Choice<'_> {
         self.matches[self.selected].choice
     }
 
@@ -266,7 +274,7 @@ mod tests {
                 cursor::nowrap("bar"),
                 cursor::restore_position(),
             ),
-            choices.next()
+            choices.select_next()
         );
         assert_eq!(0, choices.selected);
     }
@@ -289,7 +297,7 @@ mod tests {
                 cursor::nowrap(&color::inverse("bar")),
                 cursor::restore_position(),
             ),
-            choices.next()
+            choices.select_next()
         );
         assert_eq!(1, choices.selected);
     }
@@ -309,6 +317,19 @@ mod tests {
     }
 
     #[test]
+    fn next_alias_preserves_selection_and_wrapping() {
+        let input = vec![make_choice("foo"), make_choice("bar")];
+        let mut legacy = Choices::new(1, &input, false);
+        let mut explicit = Choices::new(1, &input, false);
+        legacy.filter(&[]);
+        explicit.filter(&[]);
+        for _ in 0..4 {
+            assert_eq!(legacy.next(), explicit.select_next());
+            assert_eq!(legacy.current_match().searchable, explicit.current_match().searchable);
+        }
+    }
+
+    #[test]
     fn test_current_match() {
         let input: Vec<Choice> = vec![
             make_choice("foo"),
@@ -320,26 +341,7 @@ mod tests {
         assert_eq!("foo", choices.current_match().searchable);
     }
 
-    #[bench]
-    fn bench_filtering(b: &mut test::Bencher) {
-        let choices: Vec<Choice> = vec![
-            make_choice("CODE_OF_CONDUCT.md"),
-            make_choice("Cargo.lock"),
-            make_choice("Cargo.toml"),
-            make_choice("LICENSE"),
-            make_choice("README.md"),
-            make_choice("benches/choices.rs"),
-            make_choice("benches/drawing.rs"),
-            make_choice("benches/matching.rs"),
-            make_choice("benches/scoring.rs"),
-            make_choice("src/bonus.rs")
-        ];
-        let query = ['c', 'o', 'd', 'e'];
-
-        b.iter(|| Choices::new(10, &choices, false).filter(&query))
-    }
-
-    fn make_choice(choice: &str) -> Choice {
+    fn make_choice(choice: &str) -> Choice<'_> {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,
             query: None, delimiter: None, field: None, output: None,

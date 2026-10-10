@@ -22,14 +22,11 @@ Download the tar file, and place the executable in your path.
 
 ##### From source
 
-Building requires a nightly Rust toolchain with Rust 1.85 or newer (the scoring
-benchmarks use the unstable `test` feature). CI uses `nightly-2025-03-01`.
-
 ```
 git clone https://github.com/npezza93/fozzie
 cd fozzie
 cargo build --release
-find. -type f | ./target/release/fozzie
+find . -type f | ./target/release/fozzie
 ```
 
 ### Usage
@@ -54,3 +51,10 @@ It favors consecutive letters and start of word matches
 `test` matches `tests` over `testing`
 
 `appcont` matches `app/controllers/application_controller.rb` over `app/controllers/home_controller.rb`
+
+### Development
+
+```sh
+cargo test --locked --all-targets
+cargo clippy --locked --all-targets -- -D warnings
+```
