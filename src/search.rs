@@ -1,5 +1,16 @@
 use crate::cursor;
 use regex::Regex;
+use std::sync::OnceLock;
+
+fn word_start_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r"\b\w").unwrap())
+}
+
+fn word_end_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r"\w\b").unwrap())
+}
 
 pub struct Search {
     pub query: Vec<char>,
@@ -80,7 +91,7 @@ impl Search {
     }
 
     pub fn left_word(&mut self) -> String {
-        let regex = Regex::new(r"\b\w").unwrap();
+        let regex = word_start_regex();
         let mut new_position = self.position;
 
         regex
@@ -96,7 +107,7 @@ impl Search {
     }
 
     pub fn right_word(&mut self) -> String {
-        let regex = Regex::new(r"\b\w").unwrap();
+        let regex = word_start_regex();
         let mut new_position = self.position;
 
         regex
@@ -116,7 +127,7 @@ impl Search {
     }
 
     pub fn backspace_word(&mut self) -> String {
-        let regex = Regex::new(r"\b\w").unwrap();
+        let regex = word_start_regex();
         let mut new_position = self.position;
 
         regex
@@ -136,7 +147,7 @@ impl Search {
     }
 
     pub fn delete_word(&mut self) -> String {
-        let regex = Regex::new(r"\w\b").unwrap();
+        let regex = word_end_regex();
         let mut new_position = self.position;
 
         regex
@@ -167,6 +178,65 @@ impl Search {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn word_regexes_are_reused() {
+        assert!(std::ptr::eq(word_start_regex(), word_start_regex()));
+        assert!(std::ptr::eq(word_end_regex(), word_end_regex()));
+    }
+
+    #[test]
+    fn word_regexes_preserve_unicode_boundaries() {
+        let query = "élan 東京 e\u{301}_x 42";
+        let starts: Vec<_> = word_start_regex()
+            .find_iter(query)
+            .map(|mat| (mat.start(), mat.as_str()))
+            .collect();
+        let ends: Vec<_> = word_end_regex()
+            .find_iter(query)
+            .map(|mat| (mat.start(), mat.as_str()))
+            .collect();
+
+        assert_eq!(starts, vec![(0, "é"), (6, "東"), (13, "e"), (19, "4")]);
+        assert_eq!(ends, vec![(4, "n"), (9, "京"), (17, "x"), (20, "2")]);
+    }
+
+    #[test]
+    fn word_operations_handle_empty_and_punctuation_queries() {
+        for query in ["", " /.- "] {
+            let mut search = Search::new("> ");
+            search.set_query(query);
+            search.left_word();
+            assert_eq!(query.len(), search.position);
+            search.backspace_word();
+            assert_eq!(query, search.query.iter().collect::<String>());
+            search.position = 0;
+            search.right_word();
+            assert_eq!(query.len(), search.position);
+            search.position = 0;
+            search.delete_word();
+            assert!(search.query.is_empty());
+        }
+    }
+
+    #[test]
+    fn word_operations_reuse_patterns_across_searches() {
+        for _ in 0..3 {
+            let mut search = Search::new("> ");
+            search.set_query("one/two_three 42");
+            search.left_word();
+            assert_eq!(14, search.position);
+            search.left_word();
+            assert_eq!(4, search.position);
+            search.right_word();
+            assert_eq!(14, search.position);
+            search.backspace_word();
+            assert_eq!(4, search.position);
+            assert_eq!("one/42", search.query.iter().collect::<String>());
+            search.delete_word();
+            assert_eq!("one/", search.query.iter().collect::<String>());
+        }
+    }
 
     #[test]
     fn test_draw() {
