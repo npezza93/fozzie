@@ -5,6 +5,10 @@ on:
 
 name: tests
 
+env:
+  RUSTFLAGS: -D warnings
+  RUSTDOCFLAGS: -D warnings
+
 jobs:
   unit:
     strategy:
@@ -42,7 +46,7 @@ jobs:
       - name: Build release and completions
         run: cargo build --locked --release
       - name: Check lints
-        run: cargo clippy --locked --all-targets
+        run: cargo clippy --locked --all-targets -- -D warnings
 
   release-build:
     strategy:

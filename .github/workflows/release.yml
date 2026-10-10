@@ -1,4 +1,6 @@
 name: release
+env:
+  RUSTFLAGS: -D warnings
 on:
   push:
     tags:

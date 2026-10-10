@@ -88,13 +88,13 @@ impl<'a> fmt::Display for Match<'a> {
 
 impl<'a> Ord for Match<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        other.scorer.score.partial_cmp(&self.scorer.score).unwrap()
     }
 }
 
 impl<'a> PartialOrd for Match<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.scorer.score.partial_cmp(&self.scorer.score)
+        Some(self.cmp(other))
     }
 }
 
@@ -109,6 +109,28 @@ impl<'a> PartialEq for Match<'a> {
 mod tests {
     use super::*;
     use crate::config::Config;
+
+    #[test]
+    fn score_ordering_is_descending_and_consistent() {
+        let choice = make_choice("foo");
+        let scores = [f32::NEG_INFINITY, -1.0, -0.0, 0.0, 1.0, f32::INFINITY];
+        for left_score in scores {
+            for right_score in scores {
+                let left = Match {
+                    choice: &choice,
+                    scorer: Score { score: left_score, positions: vec![] },
+                };
+                let right = Match {
+                    choice: &choice,
+                    scorer: Score { score: right_score, positions: vec![] },
+                };
+                let expected = right_score.partial_cmp(&left_score).unwrap();
+                assert_eq!(left.cmp(&right), expected);
+                assert_eq!(left.partial_cmp(&right), Some(expected));
+                assert_eq!(left == right, expected == Ordering::Equal);
+            }
+        }
+    }
 
     #[test]
     fn test_is_match() {
@@ -193,7 +215,7 @@ mod tests {
         Match::new(&query.chars().collect::<Vec<char>>(), choice)
     }
 
-    fn make_choice(choice: &str) -> Choice {
+    fn make_choice(choice: &str) -> Choice<'_> {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,
             query: None, delimiter: None, field: None, output: None,

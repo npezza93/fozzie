@@ -22,7 +22,7 @@ Download the tar file, and place the executable in your path.
 
 ##### From source
 
-Development, tests, benchmarks, and releases use stable Rust 1.99.0, pinned in
+Development, tests, and releases use stable Rust 1.99.0, pinned in
 `rust-toolchain.toml`. Nightly is not required. Install [rustup](https://rustup.rs/)
 and it will select the pinned toolchain in this checkout.
 
@@ -60,12 +60,5 @@ It favors consecutive letters and start of word matches
 
 ```sh
 cargo test --locked --all-targets
-cargo clippy --locked --all-targets
-cargo bench --locked --bench performance
+cargo clippy --locked --all-targets -- -D warnings
 ```
-
-The Criterion benchmarks cover matching (including uppercase queries), drawing,
-normal/empty/exact-match scoring, and filtering. Normal scoring measures the
-public `Score::new` path, including highlight positions; older libtest timings
-measured the internal matrix calculation alone, so those numbers are not directly
-comparable. Benchmark tooling is a development-only dependency.

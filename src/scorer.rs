@@ -1,10 +1,9 @@
-use std::f32::{INFINITY, NEG_INFINITY};
 use crate::choice::Choice;
 use crate::matrix::Matrix;
 use float_cmp::approx_eq;
 
-const MAX: f32 = INFINITY;
-pub const MIN: f32 = NEG_INFINITY;
+const MAX: f32 = f32::INFINITY;
+pub const MIN: f32 = f32::NEG_INFINITY;
 const GAP_TRAILING: f32 = -0.005;
 const GAP_INNER: f32 = -0.01;
 const GAP_LEADING:       f32 = -0.005;
