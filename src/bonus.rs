@@ -64,11 +64,11 @@ mod tests {
         let bonuses = compute(&"aTestString".chars().collect::<Vec<char>>());
 
         assert_eq!(1.0, bonuses[0]);
-        approx_eq!(f32, 0.78, bonuses[1], epsilon = 0.001);
+        assert!(approx_eq!(f32, 0.78, bonuses[1], epsilon = 0.001));
         assert_eq!(0.1, bonuses[2]);
         assert_eq!(0.1, bonuses[3]);
         assert_eq!(0.1, bonuses[4]);
-        approx_eq!(f32, 0.78, bonuses[5], epsilon = 0.001);
+        assert!(approx_eq!(f32, 0.78, bonuses[5], epsilon = 0.001));
         assert_eq!(0.1, bonuses[6]);
         assert_eq!(0.1, bonuses[7]);
         assert_eq!(0.1, bonuses[8]);
