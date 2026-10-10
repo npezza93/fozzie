@@ -72,25 +72,9 @@ impl App {
 
             for c in terminal.keys()? {
                 match c.unwrap() {
-                    Key::Alt(c) => match c as u8 {
-                        b'b' => {
-                            terminal.print(&search.left_word());
-                            terminal.print(&choices.filter(&search.query));
-                        },
-                        b'f' => {
-                            terminal.print(&search.right_word());
-                            terminal.print(&choices.filter(&search.query));
-                        },
-                        127 => {
-                            terminal.print(&search.backspace_word());
-                            terminal.print(&choices.filter(&search.query));
-                        },
-                        100 => {
-                            terminal.print(&search.delete_word());
-                            terminal.print(&choices.filter(&search.query));
-                        },
-                        _ => {}
-                    },
+                    Key::Alt(c) => handle_alt_key(c, &mut search, &mut choices, |text| {
+                        terminal.print(text);
+                    }),
                     Key::Char('\n') => {
                         choices.select(&mut terminal);
                         break;
@@ -139,5 +123,88 @@ impl App {
         }
 
         Ok(exit_code)
+    }
+}
+
+// Word movement only redraws the query. Editing it must also refresh the matches.
+fn handle_alt_key<F: FnMut(&str)>(
+    key: char,
+    search: &mut Search,
+    choices: &mut Choices,
+    mut print: F,
+) {
+    match key as u8 {
+        b'b' => print(&search.left_word()),
+        b'f' => print(&search.right_word()),
+        127 => {
+            print(&search.backspace_word());
+            print(&choices.filter(&search.query));
+        }
+        100 => {
+            print(&search.delete_word());
+            print(&choices.filter(&search.query));
+        }
+        _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cursor;
+
+    fn config() -> Config {
+        Config {
+            lines: 1, prompt: "> ".to_string(), show_scores: false,
+            query: None, delimiter: None, field: None, output: None,
+            benchmark: false,
+        }
+    }
+
+    #[test]
+    fn word_movement_preserves_query_selection_and_results() {
+        let config = config();
+        let input = vec![Choice::new("foo bar", &config), Choice::new("foo bars", &config)];
+        let mut choices = Choices::new(1, &input, false);
+        let mut search = Search::new("> ");
+        search.set_query("foo bar");
+        choices.filter(&search.query);
+        choices.next();
+        assert_eq!("foo bars", choices.current_match().searchable);
+
+        // Include repeated movement at both boundaries and a scrolled selection.
+        for (key, column) in [('b', 7), ('b', 3), ('b', 3), ('f', 7), ('f', 10), ('f', 10)] {
+            let mut output = Vec::new();
+            handle_alt_key(key, &mut search, &mut choices, |text| output.push(text.to_string()));
+            assert_eq!("foo bar".chars().collect::<Vec<_>>(), search.query);
+            assert_eq!("foo bars", choices.current_match().searchable);
+            assert_eq!(vec![format!("{}\r> foo bar{}", cursor::clear_line(), cursor::col(column))], output);
+        }
+        choices.next();
+        assert_eq!("foo bar", choices.current_match().searchable);
+        choices.previous();
+        assert_eq!("foo bars", choices.current_match().searchable);
+    }
+
+    #[test]
+    fn word_deletion_still_refreshes_matches() {
+        let config = config();
+        let input = vec![Choice::new("foo bar", &config), Choice::new("foo bars", &config)];
+        for key in ['\u{7f}', 'd'] {
+            let mut choices = Choices::new(1, &input, false);
+            let mut search = Search::new("> ");
+            search.set_query("foo bar");
+            choices.filter(&search.query);
+            choices.next();
+            if key == 'd' {
+                search.left_word();
+            }
+            let mut output = Vec::new();
+            handle_alt_key(key, &mut search, &mut choices, |text| output.push(text.to_string()));
+            assert_eq!("foo ".chars().collect::<Vec<_>>(), search.query);
+            assert_eq!("foo bar", choices.current_match().searchable);
+            assert_eq!(2, output.len());
+            assert!(output[1].contains(cursor::clear_screen_down()));
+        }
     }
 }
