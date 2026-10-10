@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate clap;
 extern crate terminal_size;
 
 pub mod bonus;
@@ -38,8 +36,8 @@ impl App {
         let mut buffer = String::new();
 
        if termion::is_tty(&stdin_lock) {
-           clap::Error::with_description(
-               "No input given", clap::ErrorKind::MissingRequiredArgument
+           clap::Error::raw(
+               clap::error::ErrorKind::MissingRequiredArgument, "No input given"
            ).exit();
         }
 
