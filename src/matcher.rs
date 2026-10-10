@@ -5,7 +5,7 @@ use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
 use std::{fmt, cmp};
 
-use terminal_size::{Width, Height, terminal_size};
+use terminal_size::{Width, Height, terminal_size_of};
 
 pub struct Match<'a> {
     pub choice: &'a Choice<'a>,
@@ -59,7 +59,8 @@ impl<'a> Match<'a> {
         let content = self.choice.searchable;
 
         let characters;
-        if let Some((Width(w), Height(_h))) = terminal_size() {
+        // Preserve stdout-only sizing when selected output is piped elsewhere.
+        if let Some((Width(w), Height(_h))) = terminal_size_of(std::io::stdout()) {
             let length = cmp::min(content.chars().count(), usize::from(w));
 
             characters = content[0..length].chars();

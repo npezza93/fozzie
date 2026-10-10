@@ -169,14 +169,14 @@ mod tests {
         assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING + bonus::FILENAME, score("a", "**a*"));
         assert_eq!(GAP_LEADING * 2.0 + GAP_TRAILING * 2.0 + bonus::FILENAME, score("a", "**a**"));
         assert_eq!(GAP_LEADING * 2.0 + MATCH_CONSECUTIVE + GAP_TRAILING * 2.0 + bonus::FILENAME, score("aa", "**aa**"));
-        approx_eq!(f32, GAP_LEADING + GAP_LEADING + GAP_INNER + GAP_TRAILING + GAP_TRAILING + 2.0 * bonus::FILENAME, score("aa", "**a*a**"), epsilon = 0.001);
+        assert!(approx_eq!(f32, GAP_LEADING + GAP_LEADING + GAP_INNER + GAP_TRAILING + GAP_TRAILING + 2.0 * bonus::FILENAME, score("aa", "**a*a**"), epsilon = 0.001));
     }
 
     #[test]
     fn score_consecutive_test() {
         assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE + bonus::FILENAME, score("aa", "*aa"));
         assert_eq!(GAP_LEADING + MATCH_CONSECUTIVE * 2.0 + bonus::FILENAME, score("aaa", "*aaa"));
-        approx_eq!(f32, GAP_LEADING + GAP_INNER + MATCH_CONSECUTIVE + 2.0 * bonus::FILENAME, score("aaa", "*a*aa"), epsilon = 0.001);
+        assert!(approx_eq!(f32, GAP_LEADING + GAP_INNER + MATCH_CONSECUTIVE + 2.0 * bonus::FILENAME, score("aaa", "*a*aa"), epsilon = 0.001));
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
     fn score_capital_test() {
         assert_eq!(GAP_LEADING + bonus::CAPITAL + bonus::FILENAME, score("a", "bA"));
         assert_eq!(GAP_LEADING * 2.0 + bonus::CAPITAL + bonus::FILENAME, score("a", "baA"));
-        approx_eq!(f32, GAP_LEADING * 2.0 + bonus::CAPITAL + MATCH_CONSECUTIVE + bonus::FILENAME, score("aa", "baAa"), epsilon = 0.001);
+        assert!(approx_eq!(f32, GAP_LEADING * 2.0 + bonus::CAPITAL + MATCH_CONSECUTIVE + bonus::FILENAME, score("aa", "baAa"), epsilon = 0.001));
     }
 
     #[test]

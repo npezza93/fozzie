@@ -1,6 +1,6 @@
 use clap::{error::ErrorKind, value_parser, Arg, ArgAction, ArgMatches, Command, Error};
 use regex::Regex;
-use terminal_size::{terminal_size, Height, Width};
+use terminal_size::{terminal_size_of, Height, Width};
 
 pub struct Config {
     pub lines: usize,
@@ -27,7 +27,11 @@ impl Config {
 
     fn from_matches(matches: &ArgMatches) -> Result<Self, Error> {
         let lines = *matches.get_one::<usize>("lines").unwrap();
-        validate_lines(lines, terminal_size().map(|(Width(_), Height(h))| h))?;
+        // Keep the stdout-only sizing used before terminal_size 0.3 added fallbacks.
+        validate_lines(
+            lines,
+            terminal_size_of(std::io::stdout()).map(|(Width(_), Height(h))| h),
+        )?;
         let split = matches.subcommand_matches("split");
         let query = matches.get_one::<String>("query").or_else(|| {
             matches
