@@ -37,6 +37,10 @@ Pipe a list of items to fozzie and start searching:
 find . -type f | fozzie
 ```
 
+Long result rows are clipped to the terminal width. Long queries scroll horizontally
+to keep the editing cursor visible; Tab completion and selected output retain the
+full filename. Window-size changes are picked up on the next redraw.
+
 ### Scoring
 fozzies scoring algorithm is currently heavily based on fzy's implementaion
 which can be found [here](https://github.com/jhawthorn/fzy/blob/master/ALGORITHM.md).

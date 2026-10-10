@@ -16,6 +16,7 @@ import sys
 import tempfile
 import termios
 import time
+import unicodedata
 
 
 def check(binary, content, columns, stdout_tty, query=""):
@@ -96,9 +97,16 @@ sys.exit(result.returncode)
                 original[3] &= ~termios.PENDIN
                 restored[3] &= ~termios.PENDIN
             assert restored == original, ("terminal mode was not restored", original, restored)
-            # Keep the existing character limit and no-wrap behavior. This is
-            # deliberately not a change to grapheme or display-cell clipping.
-            visible = content[:columns] if stdout_tty else content
+            # Rendering is sized from the controlling terminal even when stdout
+            # is captured. Wide characters consume two cells, combining marks zero.
+            visible = ""
+            used = 0
+            for char in content:
+                width = 0 if unicodedata.combining(char) else (2 if unicodedata.east_asian_width(char) in "WF" else 1)
+                if used + width > columns:
+                    break
+                visible += char
+                used += width
             assert "\x1b[?7l\x1b[7m" + visible + "\x1b[27m\x1b[?7h" in terminal, terminal
             if query:
                 for char in query:

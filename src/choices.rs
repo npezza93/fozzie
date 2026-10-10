@@ -116,8 +116,9 @@ impl<'a> Choices<'a> {
     }
 
     fn draw_choices(&self) -> String {
+        let columns = crate::terminal::columns();
         self.drawn_range()
-            .map(|i| self.matches[i].draw(i == self.selected, self.show_scores))
+            .map(|i| self.matches[i].draw_with_limit(i == self.selected, self.show_scores, columns))
             .collect::<Vec<String>>()
             .join("\n\r")
     }
