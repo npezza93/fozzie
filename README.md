@@ -22,10 +22,6 @@ Download the tar file, and place the executable in your path.
 
 ##### From source
 
-Development, tests, and releases use stable Rust 1.99.0, pinned in
-`rust-toolchain.toml`. Nightly is not required. Install [rustup](https://rustup.rs/)
-and it will select the pinned toolchain in this checkout.
-
 ```
 git clone https://github.com/npezza93/fozzie
 cd fozzie
