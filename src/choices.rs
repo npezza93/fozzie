@@ -70,6 +70,10 @@ impl<'a> Choices<'a> {
         }
     }
 
+    pub(crate) fn selected_choice(&self) -> Option<&Choice<'_>> {
+        self.matches.get(self.selected).map(|matched| matched.choice)
+    }
+
     pub fn current_match(&self) -> &Choice<'_> {
         self.matches[self.selected].choice
     }
