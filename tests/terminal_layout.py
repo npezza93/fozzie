@@ -136,7 +136,7 @@ class Screen:
 
 
 class Session:
-    def __init__(self, binary, choice, columns=48):
+    def __init__(self, binary, choice, columns=48, extra_args=()):
         self.master, self.slave = pty.openpty()
         self.source = tempfile.TemporaryFile()
         self.result = tempfile.TemporaryFile()
@@ -166,7 +166,7 @@ sys.exit(result.returncode)
 """
         self.process = subprocess.Popen(
             [sys.executable, "-c", supervisor, str(self.status_write), str(self.release_read),
-             binary, "--lines", "2", "--prompt", "> "],
+             binary, "--lines", "2", "--prompt", "> ", *extra_args],
             stdin=self.source, stdout=self.result, stderr=self.errors, preexec_fn=setup,
             pass_fds=(self.status_write, self.release_read),
         )
@@ -328,8 +328,107 @@ def unicode_layout(binary):
         session.close()
 
 
+def horizontal_result_scrolling(binary):
+    choice = "projects/long/path/to/arrow.svg"
+    session = Session(binary, choice, columns=12)
+    try:
+        session.stable(choice[:12])
+        session.key(b"\x1b[C")
+        session.stable(choice[1:13])
+        assert session.screen.line(0) == ">"
+        assert session.screen.col == 2
+        session.key(b"\x1b[C" * 100)
+        session.stable(choice[-12:])
+        session.key(b"\x1b[D")
+        session.stable(choice[-13:-1])
+        session.key("p")
+        session.stable(choice[:12])
+        # Right within a query must move its cursor without moving results.
+        session.key(b"\x1b[D")
+        assert session.screen.col == 2
+        session.key(b"\x1b[C")
+        assert session.screen.col == 3
+        session.stable(choice[:12])
+        session.key(b"\x1b[C")
+        session.stable(choice[1:13])
+        session.key(b"\x7f")
+        session.stable(choice[:12])
+        session.key(b"\x1b[C" * 3)
+        session.key(b"\t")
+        session.stable(choice[:12])
+        assert session.screen.line(0).endswith("arrow.svg")
+        session.key(b"\x1b[C" * 100)
+        session.stable(choice[-12:])
+        session.resize(40)
+        session.key(b"\x1b[C")
+        session.stable(choice)
+        session.resize(12)
+        session.key(b"\x1b[C")
+        session.stable(choice[1:13])
+        session.key(b"\x15")  # Ctrl-U clears the query and resets the result view.
+        session.stable(choice[:12])
+        for edit in (b"\x7f", b"\x1b[D\x04", b"\x1b\x7f", b"\x1b[D\x1b[D\x1bd", b"\t", b"\x15"):
+            session.key(b"\x15")
+            session.key("pr")
+            session.key(b"\x1b[C" * 3)
+            session.stable(choice[3:15])
+            session.key(edit)
+            session.stable(choice[:12])
+        session.key(b"\x15")
+        session.key("ZZ")
+        session.key(b"\x1b[C" * 20)
+        session.stable("")
+        session.key(b"\x15")
+        session.finish(choice)
+    finally:
+        session.close()
+
+    # A shared viewport pans every visible row; selecting still returns full text.
+    rows = ["prefix/first/long/file.rs", "prefix/second/long/file.rs"]
+    session = Session(binary, "\n".join(rows), columns=10)
+    try:
+        session.key(b"\x1b[C" * 3)
+        assert session.screen.line(1) == rows[0][3:13]
+        assert session.screen.line(2) == rows[1][3:13]
+        session.key(b"\x1b[B")
+        assert session.screen.line(1) == rows[0][3:13]
+        assert session.screen.line(2) == rows[1][3:13]
+        session.finish(rows[1])
+    finally:
+        session.close()
+
+    choice = "ab東京e\u0301/filename.rs"
+    session = Session(binary, choice, columns=8)
+    try:
+        session.key(b"\x1b[C")
+        session.stable("b東京e\u0301/f")
+        session.key(b"\x1b[C" * 2)
+        session.stable(" 京e\u0301/fil")
+        session.key("京")
+        session.stable("ab東京e\u0301/")
+        session.key(b"\x1b[C" * 7)
+        session.stable("/filenam")
+        session.finish(choice)
+    finally:
+        session.close()
+
+    session = Session(binary, "abcdefghijklmnop", columns=12, extra_args=("--show-scores",))
+    try:
+        session.stable("(     ) abcd")
+        session.key(b"\x1b[C" * 2)
+        session.stable("(     ) cdef")
+        session.key(b"\x1b[C" * 100)
+        session.stable("(     ) mnop")
+        session.finish("abcdefghijklmnop")
+    finally:
+        session.close()
+
+
 if __name__ == "__main__":
     ascii_layout(sys.argv[1])
     print("PASS captured stdout: 48-column clipping, Tab/edit/navigation, resize, full selection")
     unicode_layout(sys.argv[1])
     print("PASS wide and combining characters: clipping, Tab, editing, cursor positions")
+
+    horizontal_result_scrolling(sys.argv[1])
+    print("PASS horizontal results: bounds, edit reset, cursor movement, navigation, resize, Unicode, scores")
