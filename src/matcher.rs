@@ -189,30 +189,6 @@ mod tests {
         assert_eq!("\x1B[?7l( 0.99) \u{1b}[33mf\u{1b}[39moo\x1B[?7h", matcher.draw(false, true))
     }
 
-    #[bench]
-    fn bench_matching(b: &mut test::Bencher) {
-        let choice = make_choice("Gemfile");
-        let query = ['g', 'e', 'm'];
-
-        b.iter(|| Match::is_match(&query, &choice))
-    }
-
-    #[bench]
-    fn bench_matching_uppercase(b: &mut test::Bencher) {
-        let choice = make_choice("Gemfile");
-        let query = ['G', 'e', 'm'];
-
-        b.iter(|| Match::is_match(&query, &choice))
-    }
-
-    #[bench]
-    fn bench_drawing(b: &mut test::Bencher) {
-        let choice = make_choice("CODE_OF_CONDUCT.md");
-        let match_ins = new_match("code", &choice).unwrap();
-
-        b.iter(|| match_ins.draw(false, false))
-    }
-
     fn new_match<'a>(query: &str, choice: &'a Choice) -> Option<Match<'a>> {
         Match::new(&query.chars().collect::<Vec<char>>(), choice)
     }

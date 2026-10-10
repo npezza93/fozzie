@@ -320,25 +320,6 @@ mod tests {
         assert_eq!("foo", choices.current_match().searchable);
     }
 
-    #[bench]
-    fn bench_filtering(b: &mut test::Bencher) {
-        let choices: Vec<Choice> = vec![
-            make_choice("CODE_OF_CONDUCT.md"),
-            make_choice("Cargo.lock"),
-            make_choice("Cargo.toml"),
-            make_choice("LICENSE"),
-            make_choice("README.md"),
-            make_choice("benches/choices.rs"),
-            make_choice("benches/drawing.rs"),
-            make_choice("benches/matching.rs"),
-            make_choice("benches/scoring.rs"),
-            make_choice("src/bonus.rs")
-        ];
-        let query = ['c', 'o', 'd', 'e'];
-
-        b.iter(|| Choices::new(10, &choices, false).filter(&query))
-    }
-
     fn make_choice(choice: &str) -> Choice {
         let config = Config {
             lines: 10, prompt: ">".to_string(), show_scores: false,

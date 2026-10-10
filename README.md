@@ -21,11 +21,16 @@ Binaries are also available on the releases page of the repo.
 Download the tar file, and place the executable in your path.
 
 ##### From source
+
+Development, tests, benchmarks, and releases use stable Rust 1.99.0, pinned in
+`rust-toolchain.toml`. Nightly is not required. Install [rustup](https://rustup.rs/)
+and it will select the pinned toolchain in this checkout.
+
 ```
 git clone https://github.com/npezza93/fozzie
 cd fozzie
 cargo build --release
-find. -type f | ./target/release/fozzie
+find . -type f | ./target/release/fozzie
 ```
 
 ### Usage
@@ -50,3 +55,17 @@ It favors consecutive letters and start of word matches
 `test` matches `tests` over `testing`
 
 `appcont` matches `app/controllers/application_controller.rb` over `app/controllers/home_controller.rb`
+
+### Development
+
+```sh
+cargo test --locked --all-targets
+cargo clippy --locked --all-targets
+cargo bench --locked --bench performance
+```
+
+The Criterion benchmarks cover matching (including uppercase queries), drawing,
+normal/empty/exact-match scoring, and filtering. Normal scoring measures the
+public `Score::new` path, including highlight positions; older libtest timings
+measured the internal matrix calculation alone, so those numbers are not directly
+comparable. Benchmark tooling is a development-only dependency.
