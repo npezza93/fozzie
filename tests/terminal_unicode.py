@@ -88,7 +88,8 @@ sys.exit(result.returncode)
             terminal = transcript.decode()
             assert exit_code == 0, (exit_code, output, terminal)
             assert sent, "application never entered raw mode"
-            assert termios.tcgetattr(slave) == original, "terminal mode was not restored"
+            restored = termios.tcgetattr(slave)
+            assert restored == original, ("terminal mode was not restored", original, restored)
             # Keep the existing character limit and no-wrap behavior. This is
             # deliberately not a change to grapheme or display-cell clipping.
             visible = content[:columns] if stdout_tty else content
