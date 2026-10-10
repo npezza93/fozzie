@@ -1,8 +1,6 @@
-#![feature(test)]
 #[macro_use]
 extern crate clap;
 extern crate terminal_size;
-extern crate test;
 
 pub mod bonus;
 pub mod choices;
@@ -30,7 +28,7 @@ pub struct App {}
 
 impl App {
     pub fn run() -> Result<i32, Box<dyn Error>> {
-        let config = Config::new();
+        let config = Config::from_args();
         let mut exit_code = 0;
 
         let mut terminal = Terminal::new()?;
@@ -89,7 +87,7 @@ impl App {
                     }
                     Key::Ctrl('u') => terminal.print(&search.clear()),
                     Key::Up => terminal.print(&choices.previous()),
-                    Key::Down => terminal.print(&choices.next()),
+                    Key::Down => terminal.print(&choices.select_next()),
                     Key::Esc | Key::Ctrl('c') => {
                         exit_code = 1;
                         terminal.print(&choices.cancel());
@@ -169,7 +167,7 @@ mod tests {
         let mut search = Search::new("> ");
         search.set_query("foo bar");
         choices.filter(&search.query);
-        choices.next();
+        choices.select_next();
         assert_eq!("foo bars", choices.current_match().searchable);
 
         // Include repeated movement at both boundaries and a scrolled selection.
@@ -180,7 +178,7 @@ mod tests {
             assert_eq!("foo bars", choices.current_match().searchable);
             assert_eq!(vec![format!("{}\r> foo bar{}", cursor::clear_line(), cursor::col(column))], output);
         }
-        choices.next();
+        choices.select_next();
         assert_eq!("foo bar", choices.current_match().searchable);
         choices.previous();
         assert_eq!("foo bars", choices.current_match().searchable);
@@ -195,7 +193,7 @@ mod tests {
             let mut search = Search::new("> ");
             search.set_query("foo bar");
             choices.filter(&search.query);
-            choices.next();
+            choices.select_next();
             if key == 'd' {
                 search.left_word();
             }

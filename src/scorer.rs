@@ -1,10 +1,9 @@
-use std::f32::{INFINITY, NEG_INFINITY};
 use crate::choice::Choice;
 use crate::matrix::Matrix;
 use float_cmp::approx_eq;
 
-const MAX: f32 = INFINITY;
-pub const MIN: f32 = NEG_INFINITY;
+const MAX: f32 = f32::INFINITY;
+pub const MIN: f32 = f32::NEG_INFINITY;
 const GAP_TRAILING: f32 = -0.005;
 const GAP_INNER: f32 = -0.01;
 const GAP_LEADING:       f32 = -0.005;
@@ -277,30 +276,6 @@ mod tests {
         assert_eq!(3, positions[3]);
         assert_eq!(4, positions[4]);
         assert_eq!(5, positions.len());
-    }
-
-    #[bench]
-    fn bench_normal_scoring(b: &mut test::Bencher) {
-        let choice = Choice::new("CODE_OF_CONDUCT.md", &config());
-        let query = ['c', 'o', 'd', 'e'];
-
-        b.iter(|| compute(&query, &choice, 4, choice.searchable_len))
-    }
-
-    #[bench]
-    fn bench_scoring_empty_query(b: &mut test::Bencher) {
-        let choice = Choice::new("CODE_OF_CONDUCT.md", &config());
-        let query = [];
-
-        b.iter(|| Score::new(&query, &choice))
-    }
-
-    #[bench]
-    fn bench_scoring_entire_query(b: &mut test::Bencher) {
-        let choice = Choice::new("gem", &config());
-        let query = ['g', 'e', 'm'];
-
-        b.iter(|| Score::new(&query, &choice))
     }
 
     fn score(choice: &str, query: &str) -> f32 {

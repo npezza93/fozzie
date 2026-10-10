@@ -1,6 +1,13 @@
-on: [push]
+on:
+  push:
+    branches: [master]
+  pull_request:
 
 name: tests
+
+env:
+  RUSTFLAGS: -D warnings
+  RUSTDOCFLAGS: -D warnings
 
 jobs:
   unit:
@@ -29,9 +36,48 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2024-01-01
+          toolchain: 1.99.0
+          components: clippy
           override: true
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked
+          args: --locked --all-targets
+      - name: Build release and completions
+        run: cargo build --locked --release
+      - name: Check lints
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  release-build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain and release target
+        run: rustup toolchain install 1.99.0 --profile minimal --target ${{ matrix.target }}
+      - name: Install musl linker
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build release binary and verify completions
+        shell: bash
+        run: |
+          cargo build --locked --release --target ${{ matrix.target }}
+          output="target/${{ matrix.target }}/release"
+          "$output/fozzie" --version
+          test -s "$output/fozzie.bash"
+          test -s "$output/fozzie.fish"
+          test -s "$output/_fozzie"
+          bash -n "$output/fozzie.bash"
+          mkdir -p package/complete
+          cp "$output/fozzie" package/
+          cp "$output/fozzie.bash" "$output/fozzie.fish" "$output/_fozzie" package/complete/
+          tar czf fozzie-smoke.tar.gz package
+          tar tzf fozzie-smoke.tar.gz

@@ -14,7 +14,14 @@ pub struct Config {
 }
 
 impl Config {
+    /// Parse the process command-line arguments. Kept for existing library callers.
+    // A Default implementation must not parse arguments or exit the process.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
+        Self::from_args()
+    }
+
+    pub fn from_args() -> Self {
         let matches = Self::menu().get_matches();
 
         let lines       = parse_lines(&matches);
@@ -26,9 +33,7 @@ impl Config {
         let field       = subcommand_usize_value_or_exit(&matches, "field");
         let output      = subcommand_usize_value_or_exit(&matches, "output");
 
-        let benchmark   = match matches.subcommand_name() {
-            Some("benchmark") => true, _ => false
-        };
+        let benchmark   = matches!(matches.subcommand_name(), Some("benchmark"));
 
 
         Self {
