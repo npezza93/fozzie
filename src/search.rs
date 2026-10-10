@@ -1,4 +1,4 @@
-use crate::cursor;
+use crate::{cursor, terminal};
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -16,6 +16,8 @@ pub struct Search {
     pub query: Vec<char>,
     position: usize,
     prompt: String,
+    // Retain the borrowed movement-result API while returning a full redraw.
+    redraw: String,
 }
 
 impl Search {
@@ -24,20 +26,42 @@ impl Search {
             query: vec![],
             position: 0,
             prompt: prompt.into(),
+            redraw: String::new(),
         }
     }
 
     pub fn draw(&self) -> String {
-        let query: String = self.query.iter().collect();
-        let current_col = self.prompt.chars().count() + self.position + 1;
+        self.draw_with_width(terminal::columns())
+    }
 
-        format!(
-            "{}\r{}{}{}",
-            cursor::clear_line(),
-            self.prompt,
-            query,
-            cursor::col(current_col)
-        )
+    fn draw_with_width(&self, columns: Option<usize>) -> String {
+        let query: String = self.query.iter().collect();
+        let Some(columns) = columns else {
+            return format!("{}\r{}{}{}", cursor::clear_line(), self.prompt,
+                query, cursor::col(terminal::cell_width(&self.prompt)
+                    + terminal::cell_width(&self.query[..self.position].iter().collect::<String>()) + 1));
+        };
+        let columns = columns.max(1);
+        // Keep a cell for the insertion cursor, even when the prompt is wider
+        // than the terminal. Query storage is never truncated by the viewport.
+        let prompt = terminal::clip(&self.prompt, columns - 1);
+        let available = columns - terminal::cell_width(prompt);
+        let mut start = 0;
+        let mut before_cursor: usize = self.query[..self.position].iter()
+            .map(|c| unicode_width::UnicodeWidthChar::width(*c).unwrap_or(0)).sum();
+        while before_cursor >= available && start < self.position {
+            before_cursor -= unicode_width::UnicodeWidthChar::width(self.query[start]).unwrap_or(0);
+            start += 1;
+        }
+        // Do not start a viewport with combining marks detached from their base.
+        while start < self.position && unicode_width::UnicodeWidthChar::width(self.query[start]) == Some(0) {
+            start += 1;
+        }
+        let visible: String = self.query[start..].iter().collect();
+        let current_col = terminal::cell_width(prompt) + before_cursor + 1;
+        format!("{}\r{}{}", cursor::clear_line(),
+            cursor::nowrap(&format!("{}{}", prompt, terminal::clip(&visible, available))),
+            cursor::col(current_col))
     }
 
     pub fn keypress(&mut self, character: char) -> String {
@@ -69,7 +93,8 @@ impl Search {
     pub fn left(&mut self) -> Option<&str> {
         if self.position > 0 {
             self.position -= 1;
-            Some(cursor::left())
+            self.redraw = self.draw();
+            Some(&self.redraw)
         } else {
             None
         }
@@ -78,7 +103,8 @@ impl Search {
     pub fn right(&mut self) -> Option<&str> {
         if self.query.len() != self.position {
             self.position += 1;
-            Some(cursor::right())
+            self.redraw = self.draw();
+            Some(&self.redraw)
         } else {
             None
         }
@@ -93,12 +119,14 @@ impl Search {
     pub fn left_word(&mut self) -> String {
         let regex = word_start_regex();
         let mut new_position = self.position;
+        let query: String = self.query.iter().collect();
 
         regex
-            .find_iter(&self.query.iter().collect::<String>())
+            .find_iter(&query)
             .for_each(|mat| {
-                if mat.start() < self.position {
-                    new_position = mat.start();
+                let start = query[..mat.start()].chars().count();
+                if start < self.position {
+                    new_position = start;
                 }
             });
         self.position = new_position;
@@ -109,12 +137,14 @@ impl Search {
     pub fn right_word(&mut self) -> String {
         let regex = word_start_regex();
         let mut new_position = self.position;
+        let query: String = self.query.iter().collect();
 
         regex
-            .find_iter(&self.query.iter().collect::<String>())
+            .find_iter(&query)
             .for_each(|mat| {
-                if mat.start() > self.position && new_position == self.position {
-                    new_position = mat.start();
+                let start = query[..mat.start()].chars().count();
+                if start > self.position && new_position == self.position {
+                    new_position = start;
                 }
             });
         if self.position == new_position {
@@ -129,12 +159,14 @@ impl Search {
     pub fn backspace_word(&mut self) -> String {
         let regex = word_start_regex();
         let mut new_position = self.position;
+        let query: String = self.query.iter().collect();
 
         regex
-            .find_iter(&self.query.iter().collect::<String>())
+            .find_iter(&query)
             .for_each(|mat| {
-                if mat.start() < self.position {
-                    new_position = mat.start();
+                let start = query[..mat.start()].chars().count();
+                if start < self.position {
+                    new_position = start;
                 }
             });
 
@@ -149,12 +181,14 @@ impl Search {
     pub fn delete_word(&mut self) -> String {
         let regex = word_end_regex();
         let mut new_position = self.position;
+        let query: String = self.query.iter().collect();
 
         regex
-            .find_iter(&self.query.iter().collect::<String>())
+            .find_iter(&query)
             .for_each(|mat| {
-                if mat.start() > self.position && new_position == self.position {
-                    new_position = mat.end();
+                let start = query[..mat.start()].chars().count();
+                if start > self.position && new_position == self.position {
+                    new_position = query[..mat.end()].chars().count();
                 }
             });
         if self.position == new_position {
@@ -169,7 +203,7 @@ impl Search {
 
     pub fn set_query(&mut self, new_query: &str) -> String {
         self.query = new_query.chars().collect::<Vec<char>>();
-        self.position = new_query.len();
+        self.position = self.query.len();
 
         self.draw()
     }
@@ -178,6 +212,66 @@ impl Search {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn long_query_scrolls_without_changing_the_query() {
+        let mut search = Search::new("> ");
+        search.set_query("abcdefghijk");
+        assert_eq!(search.draw_with_width(Some(8)), format!("{}\r{}{}",
+            cursor::clear_line(), cursor::nowrap("> ghijk"), cursor::col(8)));
+        search.position = 0;
+        assert_eq!(search.draw_with_width(Some(8)), format!("{}\r{}{}",
+            cursor::clear_line(), cursor::nowrap("> abcdef"), cursor::col(3)));
+        assert_eq!(search.query.iter().collect::<String>(), "abcdefghijk");
+    }
+
+    #[test]
+    fn unicode_completion_and_word_operations_use_character_positions() {
+        let mut search = Search::new("> ");
+        search.set_query("élan/東京/café");
+        assert_eq!(search.position, 12);
+        search.backspace();
+        search.keypress('é');
+        search.left_word();
+        assert_eq!(search.position, 8);
+        search.backspace_word();
+        assert_eq!(search.position, 5);
+        assert_eq!(search.query.iter().collect::<String>(), "élan/café");
+        search.delete_word();
+        assert_eq!(search.query.iter().collect::<String>(), "élan/");
+    }
+
+    #[test]
+    fn viewport_counts_wide_and_combining_characters() {
+        let mut search = Search::new("🔍 ");
+        search.set_query("é東京e\u{301}");
+        assert_eq!(search.draw_with_width(Some(8)), format!("{}\r{}{}",
+            cursor::clear_line(), cursor::nowrap("🔍 京e\u{301}"), cursor::col(7)));
+        assert_eq!(search.draw_with_width(Some(1)), format!("{}\r{}{}",
+            cursor::clear_line(), cursor::nowrap(""), cursor::col(1)));
+    }
+
+    #[test]
+    fn every_cursor_position_fits_even_in_tiny_windows() {
+        for prompt in ["> ", "🔍 prompt "] {
+            let mut search = Search::new(prompt);
+            search.set_query("a東京e\u{301}💣/long/path");
+            let original = search.query.clone();
+            for width in 1..=12 {
+                for position in 0..=search.query.len() {
+                    search.position = position;
+                    let drawn = search.draw_with_width(Some(width));
+                    let (_, after) = drawn.split_once("\x1b[?7l").unwrap();
+                    let (visible, cursor) = after.split_once("\x1b[?7h").unwrap();
+                    assert!(terminal::cell_width(visible) <= width);
+                    let column: usize = cursor.strip_prefix("\x1b[").unwrap()
+                        .strip_suffix('G').unwrap().parse().unwrap();
+                    assert!((1..=width).contains(&column));
+                    assert_eq!(search.query, original);
+                }
+            }
+        }
+    }
 
     #[test]
     fn word_regexes_are_reused() {
@@ -311,7 +405,8 @@ mod tests {
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
 
-        assert_eq!(cursor::left().to_string(), search.left().unwrap());
+        let drawn = search.left().unwrap().to_string();
+        assert_eq!(search.draw(), drawn);
         assert_eq!(0, search.position);
     }
 
@@ -331,7 +426,8 @@ mod tests {
         search.query = vec!['a', 'b', 'c'];
         search.position = 1;
 
-        assert_eq!(cursor::right().to_string(), search.right().unwrap());
+        let drawn = search.right().unwrap().to_string();
+        assert_eq!(search.draw(), drawn);
         assert_eq!(2, search.position);
     }
 

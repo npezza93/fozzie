@@ -5,7 +5,7 @@ use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
 use std::fmt;
 
-use terminal_size::{Width, terminal_size_of};
+use crate::terminal;
 
 pub struct Match<'a> {
     pub choice: &'a Choice<'a>,
@@ -37,16 +37,26 @@ impl<'a> Match<'a> {
     }
 
     pub fn draw(&self, selected: bool, show_scores: bool) -> String {
-        let mut drawn = self.draw_highlights();
+        self.draw_with_limit(selected, show_scores, terminal::columns())
+    }
+
+    pub(crate) fn draw_with_limit(&self, selected: bool, show_scores: bool, limit: Option<usize>) -> String {
+        let mut prefix = String::new();
 
         if show_scores {
             let current_score = self.scorer.score;
             if current_score != MIN {
-                drawn = format!("({:5.2}) {}", current_score, drawn);
+                prefix = format!("({:5.2}) ", current_score);
             } else {
-                drawn = format!("(     ) {}", drawn);
+                prefix = "(     ) ".to_string();
             }
         }
+
+        if let Some(width) = limit {
+            prefix = terminal::clip(&prefix, width).to_string();
+        }
+        let remaining = limit.map(|width| width.saturating_sub(terminal::cell_width(&prefix)));
+        let drawn = prefix + &self.draw_highlights_with_limit(remaining);
 
         if selected {
             cursor::nowrap(&color::inverse(&drawn))
@@ -55,17 +65,10 @@ impl<'a> Match<'a> {
         }
     }
 
-    fn draw_highlights(&self) -> String {
-        // Preserve stdout-only sizing when selected output is piped elsewhere.
-        let limit = terminal_size_of(std::io::stdout())
-            .map(|(Width(width), _)| usize::from(width));
-        self.draw_highlights_with_limit(limit)
-    }
-
     fn draw_highlights_with_limit(&self, limit: Option<usize>) -> String {
-        // Scores use character positions, and the terminal limit must not be
-        // used as a byte offset into UTF-8 text.
-        self.choice.searchable.chars().take(limit.unwrap_or(usize::MAX))
+        // Clip by display cells before adding ANSI escapes. Scorer positions
+        // remain character indices in the original text.
+        terminal::clip(self.choice.searchable, limit.unwrap_or(usize::MAX)).chars()
             .enumerate()
             .map(|(i, cchar)| {
                 if self.scorer.positions.contains(&i) {
@@ -210,14 +213,14 @@ mod tests {
     }
 
     #[test]
-    fn drawing_clips_characters_without_slicing_utf8() {
+    fn drawing_clips_cells_without_slicing_utf8() {
         for content in ["café", "東京", "a💣b", "e\u{301}lan", "src/東京/café.rs"] {
             let choice = make_choice(content);
             let matcher = new_match("", &choice).unwrap();
             for limit in 0..=content.chars().count() + 1 {
                 assert_eq!(
                     matcher.draw_highlights_with_limit(Some(limit)),
-                    content.chars().take(limit).collect::<String>(),
+                    terminal::clip(content, limit),
                     "{content:?} at limit {limit}",
                 );
             }
@@ -229,10 +232,10 @@ mod tests {
     fn clipping_preserves_character_based_highlights() {
         let choice = make_choice("é東京e\u{301}/file.rs");
         let matcher = new_match("京\u{301}f", &choice).unwrap();
-        assert_eq!(matcher.draw_highlights_with_limit(Some(2)), "é東");
-        assert_eq!(matcher.draw_highlights_with_limit(Some(3)),
+        assert_eq!(matcher.draw_highlights_with_limit(Some(3)), "é東");
+        assert_eq!(matcher.draw_highlights_with_limit(Some(5)),
                    format!("é東{}", color::highlight('京')));
-        assert_eq!(matcher.draw_highlights_with_limit(Some(7)),
+        assert_eq!(matcher.draw_highlights_with_limit(Some(8)),
                    format!("é東{}e{}/{}", color::highlight('京'),
                            color::highlight('\u{301}'), color::highlight('f')));
     }
@@ -246,6 +249,14 @@ mod tests {
         assert_eq!(matcher.draw_highlights_with_limit(Some(0)), "");
         let empty = make_choice("");
         assert_eq!(new_match("", &empty).unwrap().draw_highlights_with_limit(Some(80)), "");
+    }
+
+    #[test]
+    fn score_prefix_is_part_of_the_row_budget() {
+        let choice = make_choice("long/path.svg");
+        let matcher = new_match("", &choice).unwrap();
+        assert_eq!(matcher.draw_with_limit(false, true, Some(10)), cursor::nowrap("(     ) lo"));
+        assert_eq!(matcher.draw_with_limit(false, true, Some(3)), cursor::nowrap("(  "));
     }
 
     fn new_match<'a>(query: &str, choice: &'a Choice) -> Option<Match<'a>> {
