@@ -21,6 +21,10 @@ Binaries are also available on the releases page of the repo.
 Download the tar file, and place the executable in your path.
 
 ##### From source
+
+Building requires a nightly Rust toolchain with Rust 1.85 or newer (the scoring
+benchmarks use the unstable `test` feature). CI uses `nightly-2025-03-01`.
+
 ```
 git clone https://github.com/npezza93/fozzie
 cd fozzie

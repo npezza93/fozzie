@@ -1,6 +1,6 @@
+use clap::{error::ErrorKind, value_parser, Arg, ArgAction, ArgMatches, Command, Error};
 use regex::Regex;
-use terminal_size::{Width, Height, terminal_size};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand, Error};
+use terminal_size::{terminal_size, Height, Width};
 
 pub struct Config {
     pub lines: usize,
@@ -15,104 +15,100 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Self {
-        let matches = Self::menu().get_matches();
-
-        let lines       = parse_lines(&matches);
-        let prompt      = value_t_or_exit!(matches, "prompt", String);
-        let show_scores = matches.is_present("show-scores");
-        let query       = parse_query(&matches);
-
-        let delimiter   = parse_delimiter(&matches);
-        let field       = subcommand_usize_value_or_exit(&matches, "field");
-        let output      = subcommand_usize_value_or_exit(&matches, "output");
-
-        let benchmark   = match matches.subcommand_name() {
-            Some("benchmark") => true, _ => false
-        };
-
-
-        Self {
-            lines,
-            prompt,
-            show_scores,
-            query,
-            delimiter,
-            field,
-            output,
-            benchmark
-        }
+        Self::from_matches(&Self::menu().get_matches()).unwrap_or_else(|error| error.exit())
     }
 
-    fn lines_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("lines")
-            .short("l")
+    fn from_matches(matches: &ArgMatches) -> Result<Self, Error> {
+        let lines = *matches.get_one::<usize>("lines").unwrap();
+        validate_lines(lines, terminal_size().map(|(Width(_), Height(h))| h))?;
+        let split = matches.subcommand_matches("split");
+        let query = matches.get_one::<String>("query").or_else(|| {
+            matches
+                .subcommand_matches("benchmark")
+                .and_then(|matches| matches.get_one::<String>("query"))
+        });
+
+        Ok(Self {
+            lines,
+            prompt: matches.get_one::<String>("prompt").unwrap().clone(),
+            show_scores: matches.get_flag("show-scores"),
+            query: query.cloned(),
+            delimiter: split.and_then(|matches| matches.get_one::<Regex>("delimiter").cloned()),
+            field: split.and_then(|matches| matches.get_one::<usize>("field").copied()),
+            output: split.and_then(|matches| matches.get_one::<usize>("output").copied()),
+            benchmark: matches.subcommand_name() == Some("benchmark"),
+        })
+    }
+
+    fn lines_arg() -> Arg {
+        Arg::new("lines")
+            .short('l')
             .long("lines")
             .value_name("LINES")
             .help("Specify how many lines of results to show")
-            .takes_value(true)
+            .value_parser(parse_positive_lines)
             .default_value("10")
     }
 
-    fn prompt_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("prompt")
-            .short("p")
+    fn prompt_arg() -> Arg {
+        Arg::new("prompt")
+            .short('p')
             .long("prompt")
             .value_name("PROMPT")
             .help("Input prompt")
-            .takes_value(true)
             .default_value("❯ ")
     }
 
-    fn show_scores_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("show-scores")
-            .short("s")
+    fn show_scores_arg() -> Arg {
+        Arg::new("show-scores")
+            .short('s')
             .long("show-scores")
             .help("Show the scores of each match")
+            .action(ArgAction::SetTrue)
     }
 
-    fn query_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("query")
-            .short("q")
+    fn query_arg() -> Arg {
+        Arg::new("query")
+            .short('q')
             .long("query")
             .value_name("QUERY")
             .help("Initial search string")
-            .takes_value(true)
     }
 
-    fn delimiter_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("delimiter")
-            .short("d")
+    fn delimiter_arg() -> Arg {
+        Arg::new("delimiter")
+            .short('d')
             .long("delimiter")
             .value_name("DELIMITER")
             .help("Use to split the line into fields")
-            .takes_value(true)
+            .value_parser(value_parser!(Regex))
             .required(true)
     }
 
-    fn field_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("field")
-            .short("f")
+    fn field_arg() -> Arg {
+        Arg::new("field")
+            .short('f')
             .long("field")
             .value_name("FIELD")
             .help("Field to be matched")
-            .takes_value(true)
+            .value_parser(value_parser!(usize))
             .required(true)
     }
 
-    fn output_arg<'a>() -> Arg<'a, 'a> {
-        Arg::with_name("output")
-            .short("o")
+    fn output_arg() -> Arg {
+        Arg::new("output")
+            .short('o')
             .long("output")
             .value_name("OUTPUT")
             .help("Field to be returned once selected [default: FIELD]")
-            .takes_value(true)
+            .value_parser(value_parser!(usize))
     }
 
-    pub fn menu<'a>() -> App<'a, 'a> {
-        App::new("fozzie")
-            .version(crate_version!())
-            .author(crate_authors!())
-            .setting(AppSettings::DisableHelpSubcommand)
+    pub fn menu() -> Command {
+        Command::new("fozzie")
+            .version(env!("CARGO_PKG_VERSION"))
+            .author(env!("CARGO_PKG_AUTHORS"))
+            .disable_help_subcommand(true)
             .arg(Self::lines_arg())
             .arg(Self::prompt_arg())
             .arg(Self::query_arg())
@@ -121,74 +117,196 @@ impl Config {
             .subcommand(Self::benchmark_subcommand())
     }
 
-    fn split_subcommand<'a>() -> App<'a, 'a> {
-        SubCommand::with_name("split")
+    fn split_subcommand() -> Command {
+        Command::new("split")
             .about("Splits lines into fields")
-            .setting(AppSettings::DisableVersion)
+            .disable_version_flag(true)
             .arg(Self::delimiter_arg())
             .arg(Self::field_arg())
             .arg(Self::output_arg())
     }
 
-    fn benchmark_subcommand<'a>() -> App<'a, 'a> {
-        SubCommand::with_name("benchmark")
+    fn benchmark_subcommand() -> Command {
+        Command::new("benchmark")
             .about("Disables iteractivity to allow benchmarking")
-            .setting(AppSettings::DisableVersion)
+            .disable_version_flag(true)
             .arg(Self::query_arg().required(true))
     }
 }
 
-fn parse_query(matches: &ArgMatches) -> Option<String> {
-    if matches.is_present("query") {
-        Some(value_t_or_exit!(matches, "query", String))
-    } else if let Some(matches) = matches.subcommand_matches("benchmark") {
-        if matches.is_present("query") {
-            Some(value_t_or_exit!(matches, "query", String))
-        } else {
-            None
-        }
-    } else {
-        None
+fn parse_positive_lines(value: &str) -> Result<usize, String> {
+    let lines = value.parse::<usize>().map_err(|error| error.to_string())?;
+    if lines == 0 {
+        return Err("The argument 'lines' must be greater than 0".to_string());
     }
+    Ok(lines)
 }
 
-fn optional_usize_value_or_exit(matches: &ArgMatches, field: &str) -> Option<usize> {
-    if matches.is_present(field) {
-        Some(value_t_or_exit!(matches, field, usize))
-    } else {
-        None
-    }
-}
-
-fn subcommand_usize_value_or_exit(matches: &ArgMatches, field: &str) -> Option<usize> {
-    if let Some(matches) = matches.subcommand_matches("split") {
-        optional_usize_value_or_exit(matches, field)
-    } else {
-        None
-    }
-}
-
-fn parse_lines(matches: &ArgMatches) -> usize {
-    let lines = value_t_or_exit!(matches, "lines", usize);
-
-    if lines < 1 {
-        Error::value_validation_auto(format!("The argument '{}' must be greater than 0", "lines")).exit();
-    }
-    if let Some((Width(_w), Height(h))) = terminal_size() {
-        if usize::from(h) <= lines {
-            Error::value_validation_auto(format!("The argument '{}' must be less than {}", "lines", h)).exit();
+fn validate_lines(lines: usize, terminal_height: Option<u16>) -> Result<(), Error> {
+    if let Some(height) = terminal_height {
+        if usize::from(height) <= lines {
+            return Err(Error::raw(
+                ErrorKind::ValueValidation,
+                format!("The argument 'lines' must be less than {}", height),
+            ));
         }
     }
-
-    lines
+    Ok(())
 }
 
-fn parse_delimiter(matches: &ArgMatches) -> Option<Regex> {
-    if let Some(matches) = matches.subcommand_matches("split") {
-        let delimiter = value_t_or_exit!(matches, "delimiter", String);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        Some(Regex::new(&delimiter).unwrap())
-    } else {
-        None
+    fn parse(args: &[&str]) -> Config {
+        let matches = Config::menu().try_get_matches_from(args).unwrap();
+        Config::from_matches(&matches).unwrap()
+    }
+
+    #[test]
+    fn command_definition_is_valid() {
+        Config::menu().debug_assert();
+    }
+
+    #[test]
+    fn defaults_are_unchanged() {
+        let config = parse(&["fozzie"]);
+        assert_eq!(config.lines, 10);
+        assert_eq!(config.prompt, "❯ ");
+        assert!(!config.show_scores);
+        assert!(config.query.is_none());
+        assert!(config.delimiter.is_none());
+        assert!(config.field.is_none());
+        assert!(config.output.is_none());
+        assert!(!config.benchmark);
+    }
+
+    #[test]
+    fn short_and_long_options_are_equivalent() {
+        for args in [
+            vec!["fozzie", "-l", "1", "-p", "> ", "-s", "-q", "a,b"],
+            vec![
+                "fozzie",
+                "--lines=1",
+                "--prompt=> ",
+                "--show-scores",
+                "--query=a,b",
+            ],
+        ] {
+            let config = parse(&args);
+            assert_eq!(config.lines, 1);
+            assert_eq!(config.prompt, "> ");
+            assert!(config.show_scores);
+            assert_eq!(config.query.as_deref(), Some("a,b"));
+        }
+    }
+
+    #[test]
+    fn empty_prompt_and_query_are_allowed() {
+        let config = parse(&["fozzie", "-p", "", "-q", ""]);
+        assert_eq!(config.prompt, "");
+        assert_eq!(config.query.as_deref(), Some(""));
+    }
+
+    #[test]
+    fn split_preserves_regex_and_optional_output() {
+        let config = parse(&["fozzie", "split", "-d", "\\s+", "-f", "0"]);
+        assert!(config.delimiter.unwrap().is_match(" "));
+        assert_eq!(config.field, Some(0));
+        assert_eq!(config.output, None);
+        assert!(!config.benchmark);
+
+        let config = parse(&[
+            "fozzie",
+            "split",
+            "--delimiter=:|,",
+            "--field=2",
+            "--output=1",
+        ]);
+        assert_eq!(config.delimiter.unwrap().as_str(), ":|,");
+        assert_eq!(config.field, Some(2));
+        assert_eq!(config.output, Some(1));
+    }
+
+    #[test]
+    fn benchmark_uses_its_query_unless_top_level_query_is_present() {
+        let config = parse(&["fozzie", "benchmark", "-q", "inner"]);
+        assert!(config.benchmark);
+        assert_eq!(config.query.as_deref(), Some("inner"));
+        let config = parse(&["fozzie", "-q", "outer", "benchmark", "-q", "inner"]);
+        assert!(config.benchmark);
+        assert_eq!(config.query.as_deref(), Some("outer"));
+    }
+
+    #[test]
+    fn required_subcommand_options_are_enforced() {
+        for args in [
+            vec!["fozzie", "split"],
+            vec!["fozzie", "split", "-d", ":"],
+            vec!["fozzie", "split", "-f", "1"],
+            vec!["fozzie", "benchmark"],
+            vec!["fozzie", "-q", "outer", "benchmark"],
+        ] {
+            let error = Config::menu().try_get_matches_from(args).unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::MissingRequiredArgument);
+        }
+    }
+
+    #[test]
+    fn invalid_typed_values_are_errors() {
+        for args in [
+            vec!["fozzie", "-l", "0"],
+            vec!["fozzie", "-l", "abc"],
+            vec!["fozzie", "--lines=-1"],
+            vec!["fozzie", "-l", "999999999999999999999999999999999999999"],
+            vec!["fozzie", "split", "-d", "[", "-f", "1"],
+            vec!["fozzie", "split", "-d", ":", "--field=-1"],
+            vec!["fozzie", "split", "-d", ":", "-f", "abc"],
+            vec!["fozzie", "split", "-d", ":", "-f", "1", "-o", "abc"],
+        ] {
+            assert_eq!(
+                Config::menu()
+                    .try_get_matches_from(args)
+                    .unwrap_err()
+                    .kind(),
+                ErrorKind::ValueValidation
+            );
+        }
+    }
+
+    #[test]
+    fn line_limit_reserves_space_for_the_prompt() {
+        assert!(validate_lines(10, None).is_ok());
+        assert!(validate_lines(9, Some(10)).is_ok());
+        assert!(validate_lines(10, Some(10)).is_err());
+        assert!(validate_lines(11, Some(10)).is_err());
+        assert_eq!(parse_positive_lines("+2").unwrap(), 2);
+    }
+
+    #[test]
+    fn duplicate_arguments_are_rejected() {
+        for args in [
+            vec!["fozzie", "-ss"],
+            vec!["fozzie", "-q", "one", "-q", "two"],
+        ] {
+            assert_eq!(
+                Config::menu()
+                    .try_get_matches_from(args)
+                    .unwrap_err()
+                    .kind(),
+                ErrorKind::ArgumentConflict
+            );
+        }
+    }
+
+    #[test]
+    fn top_level_arguments_do_not_become_global() {
+        for args in [
+            vec!["fozzie", "benchmark", "-q", "test", "-s"],
+            vec!["fozzie", "split", "-d", ":", "-f", "1", "-q", "test"],
+            vec!["fozzie", "split", "--version"],
+        ] {
+            assert!(Config::menu().try_get_matches_from(args).is_err());
+        }
     }
 }

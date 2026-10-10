@@ -29,7 +29,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2024-01-01
+          toolchain: nightly-2025-03-01
           override: true
       - uses: actions-rs/cargo@v1
         with:

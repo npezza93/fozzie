@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate clap;
-
-use clap::Shell;
+use clap_complete::{generate_to, Shell};
 use std::env;
 use std::path::PathBuf;
 
@@ -16,7 +13,8 @@ fn main() {
     outdir.pop();
     outdir.pop();
 
-    app.gen_completions("fozzie", Shell::Bash, &outdir);
-    app.gen_completions("fozzie", Shell::Fish, &outdir);
-    app.gen_completions("fozzie", Shell::Zsh, outdir);
+    for shell in [Shell::Bash, Shell::Fish, Shell::Zsh] {
+        generate_to(shell, &mut app, "fozzie", &outdir)
+            .expect("Could not generate shell completions");
+    }
 }
