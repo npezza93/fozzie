@@ -83,7 +83,9 @@ impl App {
                         terminal.print(&search.keypress(c));
                         terminal.print(&choices.filter(&search.query));
                     }
-                    Key::Ctrl('u') => terminal.print(&search.clear()),
+                    Key::Ctrl('u') => clear_query(&mut search, &mut choices, |text| {
+                        terminal.print(text);
+                    }),
                     Key::Up => terminal.print(&choices.previous()),
                     Key::Down => terminal.print(&choices.select_next()),
                     Key::Esc | Key::Ctrl('c') => {
@@ -122,6 +124,15 @@ impl App {
     }
 }
 
+fn clear_query<F: FnMut(&str)>(
+    search: &mut Search,
+    choices: &mut Choices,
+    mut print: F,
+) {
+    print(&search.clear());
+    print(&choices.filter(&search.query));
+}
+
 // Word movement only redraws the query. Editing it must also refresh the matches.
 fn handle_alt_key<F: FnMut(&str)>(
     key: char,
@@ -154,6 +165,39 @@ mod tests {
             lines: 1, prompt: "> ".to_string(), show_scores: false,
             query: None, delimiter: None, field: None, output: None,
             benchmark: false,
+        }
+    }
+
+    #[test]
+    fn clearing_query_restores_all_matches_and_resets_selection() {
+        let config = config();
+        let input = vec![
+            Choice::new("alpha", &config),
+            Choice::new("beta", &config),
+            Choice::new("bravo", &config),
+        ];
+        for query in ["b", "missing", ""] {
+            let mut choices = Choices::new(2, &input, false);
+            let mut search = Search::new("> ");
+            search.set_query(query);
+            choices.filter(&search.query);
+            if query != "missing" {
+                choices.select_next();
+            }
+
+            // Also exercise repeated clearing after the query is already empty.
+            for _ in 0..2 {
+                let mut output = Vec::new();
+                clear_query(&mut search, &mut choices, |text| output.push(text.to_string()));
+                assert!(search.query.is_empty());
+                assert_eq!(2, output.len());
+                assert_eq!(search.draw(), output[0]);
+                assert!(output[1].contains(cursor::clear_screen_down()));
+                for expected in ["alpha", "beta", "bravo", "alpha"] {
+                    assert_eq!(expected, choices.current_match().searchable);
+                    choices.select_next();
+                }
+            }
         }
     }
 
