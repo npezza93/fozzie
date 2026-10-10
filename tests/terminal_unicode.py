@@ -89,6 +89,12 @@ sys.exit(result.returncode)
             assert exit_code == 0, (exit_code, output, terminal)
             assert sent, "application never entered raw mode"
             restored = termios.tcgetattr(slave)
+            if sys.platform == "darwin":
+                # Darwin sets this transient input-reprocessing bit when
+                # restoring ICANON; it is not an unrestored terminal mode.
+                # https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/tty.c
+                original[3] &= ~termios.PENDIN
+                restored[3] &= ~termios.PENDIN
             assert restored == original, ("terminal mode was not restored", original, restored)
             # Keep the existing character limit and no-wrap behavior. This is
             # deliberately not a change to grapheme or display-cell clipping.
