@@ -10,6 +10,7 @@ pub struct Choices<'a> {
     max_choices: usize,
     matches: Vec<Match<'a>>,
     show_scores: bool,
+    horizontal_offset: usize,
 }
 
 impl<'a> Choices<'a> {
@@ -18,6 +19,7 @@ impl<'a> Choices<'a> {
     pub fn new(max_choices: usize, choices: &'a [Choice], show_scores: bool) -> Choices<'a> {
         Choices {
             selected: 0,
+            horizontal_offset: 0,
             matches: vec![],
             choices,
             max_choices,
@@ -89,6 +91,7 @@ impl<'a> Choices<'a> {
 
     fn filter_choices(&mut self, query: &[char]) {
         self.selected = 0;
+        self.horizontal_offset = 0;
         self.matches = self
             .choices
             .par_iter()
@@ -115,10 +118,45 @@ impl<'a> Choices<'a> {
         }
     }
 
+    pub(crate) fn scroll_right(&mut self) -> String {
+        self.shift_horizontal(true, crate::terminal::columns());
+        self.draw()
+    }
+
+    pub(crate) fn scroll_left(&mut self) -> String {
+        self.shift_horizontal(false, crate::terminal::columns());
+        self.draw()
+    }
+
+    fn max_horizontal_offset(&self, columns: Option<usize>) -> usize {
+        columns.map_or(0, |columns| self.drawn_range()
+            .map(|i| self.matches[i].max_scroll(self.show_scores, columns))
+            .max().unwrap_or(0))
+    }
+
+    fn shift_horizontal(&mut self, right: bool, columns: Option<usize>) {
+        let maximum = self.max_horizontal_offset(columns);
+        let current = self.horizontal_offset.min(maximum);
+        self.horizontal_offset = if right {
+            current.saturating_add(1).min(maximum)
+        } else {
+            current.saturating_sub(1)
+        };
+    }
+
     fn draw_choices(&self) -> String {
-        let columns = crate::terminal::columns();
+        self.draw_choices_with_width(crate::terminal::columns())
+    }
+
+    fn draw_choices_with_width(&self, columns: Option<usize>) -> String {
+        // Resizing or navigating to shorter rows must not leave a blank viewport.
+        let offset = if self.horizontal_offset == 0 {
+            0
+        } else {
+            self.horizontal_offset.min(self.max_horizontal_offset(columns))
+        };
         self.drawn_range()
-            .map(|i| self.matches[i].draw_with_limit(i == self.selected, self.show_scores, columns))
+            .map(|i| self.matches[i].draw_scrolled(i == self.selected, self.show_scores, columns, offset))
             .collect::<Vec<String>>()
             .join("\n\r")
     }
@@ -344,6 +382,55 @@ mod tests {
         choices.filter(&[]);
 
         assert_eq!("foo", choices.current_match().searchable);
+    }
+
+    #[test]
+    fn horizontal_scrolling_is_bounded_and_filtering_resets_it() {
+        let input = vec![make_choice("abcdefghijk"), make_choice("abc")];
+        let mut choices = Choices::new(2, &input, false);
+        choices.filter(&[]);
+        for _ in 0..20 {
+            choices.shift_horizontal(true, Some(5));
+        }
+        assert_eq!(choices.horizontal_offset, 6);
+        assert_eq!(choices.current_match().searchable, "abcdefghijk");
+        assert_eq!(choices.draw_choices_with_width(Some(5)),
+            format!("{}\n\r{}", cursor::nowrap(&color::inverse("ghijk")), cursor::nowrap("")));
+        choices.shift_horizontal(false, Some(5));
+        assert_eq!(choices.horizontal_offset, 5);
+        choices.filter(&['a']);
+        assert_eq!(choices.horizontal_offset, 0);
+        for _ in 0..3 {
+            choices.shift_horizontal(false, Some(5));
+        }
+        assert_eq!(choices.horizontal_offset, 0);
+        choices.filter(&['z']);
+        choices.shift_horizontal(true, Some(5));
+        assert_eq!(choices.horizontal_offset, 0);
+    }
+
+    #[test]
+    fn scrolling_uses_visible_rows_and_clamps_on_resize_and_navigation() {
+        let input = vec![make_choice("abcdefghijk"), make_choice("xy"), make_choice("yz")];
+        let mut choices = Choices::new(2, &input, false);
+        choices.filter(&[]);
+        for _ in 0..10 {
+            choices.shift_horizontal(true, Some(5));
+        }
+        assert_eq!(choices.horizontal_offset, 6);
+        assert_eq!(choices.draw_choices_with_width(Some(20)),
+            format!("{}\n\r{}", cursor::nowrap(&color::inverse("abcdefghijk")), cursor::nowrap("xy")));
+        assert_eq!(choices.horizontal_offset, 6);
+        assert_eq!(choices.draw_choices_with_width(Some(5)),
+            format!("{}\n\r{}", cursor::nowrap(&color::inverse("ghijk")), cursor::nowrap("")));
+        choices.select_next();
+        assert_eq!(choices.draw_choices_with_width(Some(5)),
+            format!("{}\n\r{}", cursor::nowrap(&color::inverse("xy")), cursor::nowrap("yz")));
+        choices.shift_horizontal(true, Some(5));
+        assert_eq!(choices.horizontal_offset, 0);
+        choices.previous();
+        choices.shift_horizontal(true, None);
+        assert_eq!(choices.horizontal_offset, 0);
     }
 
     fn make_choice(choice: &str) -> Choice<'_> {

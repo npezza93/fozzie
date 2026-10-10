@@ -41,23 +41,34 @@ impl<'a> Match<'a> {
     }
 
     pub(crate) fn draw_with_limit(&self, selected: bool, show_scores: bool, limit: Option<usize>) -> String {
-        let mut prefix = String::new();
+        self.draw_scrolled(selected, show_scores, limit, 0)
+    }
 
-        if show_scores {
-            let current_score = self.scorer.score;
-            if current_score != MIN {
-                prefix = format!("({:5.2}) ", current_score);
-            } else {
-                prefix = "(     ) ".to_string();
-            }
+    fn score_prefix(&self, show_scores: bool) -> String {
+        if !show_scores {
+            String::new()
+        } else if self.scorer.score != MIN {
+            format!("({:5.2}) ", self.scorer.score)
+        } else {
+            "(     ) ".to_string()
         }
+    }
 
-        if let Some(width) = limit {
-            prefix = terminal::clip(&prefix, width).to_string();
+    pub(crate) fn max_scroll(&self, show_scores: bool, columns: usize) -> usize {
+        let available = columns.saturating_sub(terminal::cell_width(&self.score_prefix(show_scores)));
+        if available == 0 {
+            0
+        } else {
+            terminal::cell_width(self.choice.searchable).saturating_sub(available)
         }
-        let remaining = limit.map(|width| width.saturating_sub(terminal::cell_width(&prefix)));
-        let drawn = prefix + &self.draw_highlights_with_limit(remaining);
+    }
 
+    pub(crate) fn draw_scrolled(&self, selected: bool, show_scores: bool,
+                                limit: Option<usize>, offset: usize) -> String {
+        let prefix = self.score_prefix(show_scores);
+        let prefix = terminal::clip(&prefix, limit.unwrap_or(usize::MAX));
+        let remaining = limit.map(|width| width.saturating_sub(terminal::cell_width(prefix)));
+        let drawn = prefix.to_string() + &self.draw_highlights_scrolled(remaining, offset);
         if selected {
             cursor::nowrap(&color::inverse(&drawn))
         } else {
@@ -65,19 +76,47 @@ impl<'a> Match<'a> {
         }
     }
 
+    #[cfg(test)]
     fn draw_highlights_with_limit(&self, limit: Option<usize>) -> String {
-        // Clip by display cells before adding ANSI escapes. Scorer positions
-        // remain character indices in the original text.
-        terminal::clip(self.choice.searchable, limit.unwrap_or(usize::MAX)).chars()
-            .enumerate()
-            .map(|(i, cchar)| {
-                if self.scorer.positions.contains(&i) {
-                    color::highlight(cchar)
-                } else {
-                    cchar.to_string()
+        self.draw_highlights_scrolled(limit, 0)
+    }
+
+    fn draw_highlights_scrolled(&self, limit: Option<usize>, offset: usize) -> String {
+        let mut drawn = String::new();
+        let mut column: usize = 0;
+        let end = offset.saturating_add(limit.unwrap_or(usize::MAX));
+        let mut visible_base = false;
+        // Keep original character indices for highlighting. A wide character
+        // cut by the left edge leaves blank cells, never half a glyph; combining
+        // marks are only drawn when their base is visible.
+        for (i, character) in self.choice.searchable.chars().enumerate() {
+            let width = unicode_width::UnicodeWidthChar::width(character).unwrap_or(0);
+            if width == 0 {
+                if !visible_base {
+                    continue;
                 }
-            })
-            .collect()
+            } else {
+                let next = column + width;
+                if next > end {
+                    break;
+                }
+                visible_base = column >= offset;
+                if !visible_base {
+                    if next > offset {
+                        drawn.push_str(&" ".repeat(next - offset));
+                    }
+                    column = next;
+                    continue;
+                }
+                column = next;
+            }
+            if self.scorer.positions.contains(&i) {
+                drawn.push_str(&color::highlight(character));
+            } else {
+                drawn.push(character);
+            }
+        }
+        drawn
     }
 }
 
@@ -257,6 +296,36 @@ mod tests {
         let matcher = new_match("", &choice).unwrap();
         assert_eq!(matcher.draw_with_limit(false, true, Some(10)), cursor::nowrap("(     ) lo"));
         assert_eq!(matcher.draw_with_limit(false, true, Some(3)), cursor::nowrap("(  "));
+    }
+
+    #[test]
+    fn scrolling_preserves_unicode_cells_and_original_highlight_indices() {
+        let choice = make_choice("ab東京e\u{301}/filename.rs");
+        let matcher = new_match("京\u{301}f", &choice).unwrap();
+        assert_eq!(matcher.draw_highlights_scrolled(Some(8), 1),
+            format!("b東{}e{}/{}", color::highlight('京'),
+                    color::highlight('\u{301}'), color::highlight('f')));
+        assert_eq!(matcher.draw_highlights_scrolled(Some(8), 3),
+            format!(" {}e{}/{}il", color::highlight('京'),
+                    color::highlight('\u{301}'), color::highlight('f')));
+        assert_eq!(matcher.draw_highlights_scrolled(Some(5), 7),
+            format!("/{}ile", color::highlight('f')));
+        assert_eq!(matcher.draw_highlights_scrolled(Some(1), 3), " ");
+        assert_eq!(matcher.draw_highlights_scrolled(Some(0), 3), "");
+        assert_eq!(choice.searchable, "ab東京e\u{301}/filename.rs");
+    }
+
+    #[test]
+    fn scrolling_keeps_scores_fixed_and_inside_the_row_budget() {
+        let choice = make_choice("abcdefghijk");
+        let matcher = new_match("", &choice).unwrap();
+        assert_eq!(matcher.max_scroll(true, 12), 7);
+        assert_eq!(matcher.max_scroll(true, 8), 0);
+        assert_eq!(matcher.max_scroll(false, 12), 0);
+        assert_eq!(matcher.draw_scrolled(false, true, Some(12), 2),
+            cursor::nowrap("(     ) cdef"));
+        assert_eq!(matcher.draw_scrolled(true, true, Some(3), 2),
+            cursor::nowrap(&color::inverse("(  ")));
     }
 
     fn new_match<'a>(query: &str, choice: &'a Choice) -> Option<Match<'a>> {

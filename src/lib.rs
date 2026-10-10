@@ -95,11 +95,15 @@ impl App {
                     Key::Left => {
                         if let Some(text) = search.left() {
                             terminal.print(text);
+                        } else {
+                            terminal.print(&choices.scroll_left());
                         }
                     }
                     Key::Right => {
                         if let Some(text) = search.right() {
                             terminal.print(text);
+                        } else {
+                            terminal.print(&choices.scroll_right());
                         }
                     }
                     Key::Backspace => {
