@@ -54,6 +54,8 @@ It favors consecutive letters and start of word matches
 
 ### Development
 
+The Unix terminal regression tests require Python 3 (standard library only).
+
 ```sh
 cargo test --locked --all-targets
 cargo clippy --locked --all-targets -- -D warnings

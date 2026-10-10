@@ -3,9 +3,9 @@ use crate::color;
 use crate::cursor;
 use crate::scorer::{Score, MIN};
 use std::cmp::Ordering;
-use std::{fmt, cmp};
+use std::fmt;
 
-use terminal_size::{Width, Height, terminal_size_of};
+use terminal_size::{Width, terminal_size_of};
 
 pub struct Match<'a> {
     pub choice: &'a Choice<'a>,
@@ -56,19 +56,16 @@ impl<'a> Match<'a> {
     }
 
     fn draw_highlights(&self) -> String {
-        let content = self.choice.searchable;
-
-        let characters;
         // Preserve stdout-only sizing when selected output is piped elsewhere.
-        if let Some((Width(w), Height(_h))) = terminal_size_of(std::io::stdout()) {
-            let length = cmp::min(content.chars().count(), usize::from(w));
+        let limit = terminal_size_of(std::io::stdout())
+            .map(|(Width(width), _)| usize::from(width));
+        self.draw_highlights_with_limit(limit)
+    }
 
-            characters = content[0..length].chars();
-        } else {
-            characters = content.chars();
-        }
-
-        characters
+    fn draw_highlights_with_limit(&self, limit: Option<usize>) -> String {
+        // Scores use character positions, and the terminal limit must not be
+        // used as a byte offset into UTF-8 text.
+        self.choice.searchable.chars().take(limit.unwrap_or(usize::MAX))
             .enumerate()
             .map(|(i, cchar)| {
                 if self.scorer.positions.contains(&i) {
@@ -210,6 +207,45 @@ mod tests {
         let matcher = new_match("f", &choice).unwrap();
 
         assert_eq!("\x1B[?7l( 0.99) \u{1b}[33mf\u{1b}[39moo\x1B[?7h", matcher.draw(false, true))
+    }
+
+    #[test]
+    fn drawing_clips_characters_without_slicing_utf8() {
+        for content in ["café", "東京", "a💣b", "e\u{301}lan", "src/東京/café.rs"] {
+            let choice = make_choice(content);
+            let matcher = new_match("", &choice).unwrap();
+            for limit in 0..=content.chars().count() + 1 {
+                assert_eq!(
+                    matcher.draw_highlights_with_limit(Some(limit)),
+                    content.chars().take(limit).collect::<String>(),
+                    "{content:?} at limit {limit}",
+                );
+            }
+            assert_eq!(matcher.draw_highlights_with_limit(None), content);
+        }
+    }
+
+    #[test]
+    fn clipping_preserves_character_based_highlights() {
+        let choice = make_choice("é東京e\u{301}/file.rs");
+        let matcher = new_match("京\u{301}f", &choice).unwrap();
+        assert_eq!(matcher.draw_highlights_with_limit(Some(2)), "é東");
+        assert_eq!(matcher.draw_highlights_with_limit(Some(3)),
+                   format!("é東{}", color::highlight('京')));
+        assert_eq!(matcher.draw_highlights_with_limit(Some(7)),
+                   format!("é東{}e{}/{}", color::highlight('京'),
+                           color::highlight('\u{301}'), color::highlight('f')));
+    }
+
+    #[test]
+    fn ascii_clipping_and_empty_content_are_unchanged() {
+        let choice = make_choice("some/long/path.rs");
+        let matcher = new_match("s", &choice).unwrap();
+        assert_eq!(matcher.draw_highlights_with_limit(Some(4)),
+                   format!("{}ome", color::highlight('s')));
+        assert_eq!(matcher.draw_highlights_with_limit(Some(0)), "");
+        let empty = make_choice("");
+        assert_eq!(new_match("", &empty).unwrap().draw_highlights_with_limit(Some(80)), "");
     }
 
     fn new_match<'a>(query: &str, choice: &'a Choice) -> Option<Match<'a>> {
