@@ -1,15 +1,26 @@
-use rayon::prelude::*;
 use crate::choice::Choice;
 use crate::cursor;
 use crate::matcher::Match;
+use crate::scorer::ScoreBuffer;
 use crate::terminal::Terminal;
+use rayon::prelude::*;
+use std::collections::BTreeMap;
 
 pub struct Choices<'a> {
     choices: &'a [Choice<'a>],
     selected: usize,
     max_choices: usize,
-    matches: Vec<Match<'a>>,
+    matches: Vec<RankedChoice<'a>>,
+    query: Vec<char>,
+    visible_matches: BTreeMap<usize, Match<'a>>,
     show_scores: bool,
+}
+
+// Keep every ranked candidate available for scrolling without allocating its
+// highlight positions. Only the visible range needs a full Match.
+struct RankedChoice<'a> {
+    choice: &'a Choice<'a>,
+    score: f32,
 }
 
 impl<'a> Choices<'a> {
@@ -19,6 +30,8 @@ impl<'a> Choices<'a> {
         Choices {
             selected: 0,
             matches: vec![],
+            query: vec![],
+            visible_matches: BTreeMap::new(),
             choices,
             max_choices,
             show_scores,
@@ -77,15 +90,31 @@ impl<'a> Choices<'a> {
 
     fn filter_choices(&mut self, query: &[char]) {
         self.selected = 0;
+        self.visible_matches.clear();
+        self.query.clear();
+        self.query.extend_from_slice(query);
+        let lower_query: Vec<char> = query.iter().map(|c| c.to_ascii_lowercase()).collect();
         self.matches = self
             .choices
             .par_iter()
-            .filter_map(|choice| Match::new(query, choice))
-            .collect::<Vec<Match<'a>>>();
-        self.matches.par_sort();
+            .map_init(ScoreBuffer::default, |buffer, choice| {
+                if Match::is_match(query, choice) {
+                    Some(RankedChoice {
+                        choice,
+                        score: buffer.score(&lower_query, choice),
+                    })
+                } else {
+                    None
+                }
+            })
+            .filter_map(|matched| matched)
+            .collect();
+        // Stable ordering keeps equal-score choices in their original order.
+        self.matches
+            .par_sort_by(|left, right| right.score.partial_cmp(&left.score).unwrap());
     }
 
-    fn draw(&self) -> String {
+    fn draw(&mut self) -> String {
         format!(
             "{}\r\n{}\r{}{}",
             cursor::save_position(),
@@ -103,9 +132,22 @@ impl<'a> Choices<'a> {
         }
     }
 
-    fn draw_choices(&self) -> String {
-        self.drawn_range()
-            .map(|i| self.matches[i].draw(i == self.selected, self.show_scores))
+    fn draw_choices(&mut self) -> String {
+        let range = self.drawn_range();
+        // Keep highlights only for the current viewport. Overlapping rows can
+        // be reused on arrow-key navigation; new rows are reconstructed lazily.
+        self.visible_matches
+            .retain(|index, _| range.contains(index));
+        range
+            .map(|i| {
+                self.visible_matches
+                    .entry(i)
+                    .or_insert_with(|| {
+                        Match::new(&self.query, self.matches[i].choice)
+                            .expect("ranked choices match the current query")
+                    })
+                    .draw(i == self.selected, self.show_scores)
+            })
             .collect::<Vec<String>>()
             .join("\n\r")
     }
@@ -318,6 +360,90 @@ mod tests {
         choices.filter(&[]);
 
         assert_eq!("foo", choices.current_match().searchable);
+    }
+
+    #[test]
+    fn score_only_ranking_and_scrolling_match_eager_matches() {
+        let input: Vec<Choice> = vec![
+            make_choice("src/class.rs"),
+            make_choice("src/classes.rs"),
+            make_choice("src/Class.rs"),
+            make_choice("src/class.rs"),
+            make_choice("class"),
+            make_choice("README.md"),
+            make_choice("src/search.rs"),
+            make_choice("src/scorer.rs"),
+        ];
+        let mut choices = Choices::new(3, &input, true);
+
+        for query in ["src", "class", "Class", "", "no match", "s"] {
+            let query: Vec<char> = query.chars().collect();
+            let mut eager: Vec<Match> = input
+                .iter()
+                .filter_map(|choice| Match::new(&query, choice))
+                .collect();
+            eager.sort();
+            choices.filter(&query);
+            assert_eq!(choices.visible_matches.len(), choices.max_choices());
+            assert_eq!(choices.query, query);
+            assert_eq!(choices.matches.len(), eager.len());
+            for (ranked, original) in choices.matches.iter().zip(&eager) {
+                assert!(std::ptr::eq(ranked.choice, original.choice));
+                assert_eq!(
+                    ranked.score.to_bits(),
+                    crate::scorer::Score::new(&query, original.choice)
+                        .score
+                        .to_bits()
+                );
+            }
+
+            // Visit every result, wrap, then traverse backwards. This also
+            // verifies highlights and displayed scores outside the first page.
+            for forward in [true, false] {
+                for _ in 0..=eager.len() {
+                    let expected = choices
+                        .drawn_range()
+                        .map(|i| eager[i].draw(i == choices.selected, true))
+                        .collect::<Vec<String>>()
+                        .join("\n\r");
+                    assert_eq!(choices.draw_choices(), expected);
+                    assert_eq!(choices.visible_matches.len(), choices.max_choices());
+                    assert!(choices
+                        .visible_matches
+                        .keys()
+                        .all(|i| choices.drawn_range().contains(i)));
+                    if forward {
+                        choices.next();
+                    } else {
+                        choices.previous();
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn score_only_ranking_preserves_unicode_and_uppercase_matching() {
+        let input = vec![
+            make_choice("é/λabc"),
+            make_choice("é/λAbc"),
+            make_choice("λabc"),
+            make_choice("é/λabc"),
+        ];
+        let mut choices = Choices::new(2, &input, false);
+        for query in ["λa", "λA", "é", "", "z"] {
+            let query: Vec<char> = query.chars().collect();
+            choices.filter_choices(&query);
+            let mut eager: Vec<Match> = input
+                .iter()
+                .filter_map(|choice| Match::new(&query, choice))
+                .collect();
+            eager.sort();
+            assert_eq!(choices.matches.len(), eager.len());
+            for (ranked, original) in choices.matches.iter().zip(&eager) {
+                assert!(std::ptr::eq(ranked.choice, original.choice));
+            }
+        }
     }
 
     #[bench]

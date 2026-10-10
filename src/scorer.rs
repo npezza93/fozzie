@@ -15,6 +15,71 @@ pub struct Score {
     pub positions: Vec<usize>,
 }
 
+/// Reusable score-only state for one Rayon job. Highlight reconstruction still
+/// uses the full matrices, but only for choices that are drawn.
+#[derive(Default)]
+pub(crate) struct ScoreBuffer {
+    rows: Vec<f32>,
+}
+
+impl ScoreBuffer {
+    /// `lower_query` must already be ASCII-lowercased. Call only after matching.
+    pub(crate) fn score(&mut self, lower_query: &[char], choice: &Choice) -> f32 {
+        if lower_query.is_empty() {
+            return MIN;
+        }
+        if lower_query.len() == choice.searchable_len {
+            return MAX;
+        }
+
+        let length = choice.searchable_len;
+        self.rows.resize(4 * length, 0.0);
+        let (first, second) = self.rows.split_at_mut(2 * length);
+
+        for (i, qchar) in lower_query.iter().enumerate() {
+            let (previous, current) = if i % 2 == 0 {
+                (&*first, &mut *second)
+            } else {
+                (&*second, &mut *first)
+            };
+            let (previous_main, previous_diagonal) = previous.split_at(length);
+            let (main, diagonal) = current.split_at_mut(length);
+            let gap_score = if i + 1 == lower_query.len() {
+                GAP_TRAILING
+            } else {
+                GAP_INNER
+            };
+            let mut prev_score = MIN;
+
+            for (j, cchar) in choice.lower_searchable.iter().enumerate() {
+                if qchar == cchar {
+                    let bonus_score = choice.bonus[j];
+                    let current_score = if i == 0 {
+                        j as f32 * GAP_LEADING + bonus_score
+                    } else if j > 0 {
+                        (previous_main[j - 1] + bonus_score)
+                            .max(previous_diagonal[j - 1] + MATCH_CONSECUTIVE)
+                    } else {
+                        MIN
+                    };
+                    prev_score = current_score.max(prev_score + gap_score);
+                    diagonal[j] = current_score;
+                } else {
+                    prev_score += gap_score;
+                    diagonal[j] = MIN;
+                }
+                main[j] = prev_score;
+            }
+        }
+
+        if lower_query.len() % 2 == 0 {
+            first[length - 1]
+        } else {
+            second[length - 1]
+        }
+    }
+}
+
 fn positions(choice_length: usize, query_length: usize, main: Matrix, diagonal: Matrix) -> Vec<usize> {
     let mut positions = vec![0_usize; query_length];
 
@@ -112,6 +177,61 @@ mod tests {
     use super::*;
     use crate::bonus;
     use crate::config::Config;
+
+    #[test]
+    fn reusable_score_buffer_matches_full_scoring() {
+        use crate::matcher::Match;
+
+        let mut buffer = ScoreBuffer::default();
+        let mut state = 73_u64;
+        let alphabet: Vec<char> = "abcABC/_-.xyzéλ".chars().collect();
+        let mut next = || {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (state >> 32) as usize
+        };
+
+        // Reuse one buffer across different candidate/query lengths, including
+        // Unicode scalars and upper/lowercase ASCII, without resetting its rows.
+        for _ in 0..4_000 {
+            let length = 1 + next() % 96;
+            let characters: Vec<char> = (0..length)
+                .map(|_| alphabet[next() % alphabet.len()])
+                .collect();
+            let content: String = characters.iter().collect();
+            let choice = Choice::new(&content, &config());
+            let query: Vec<char> = characters
+                .iter()
+                .filter(|_| next() % 4 == 0)
+                .copied()
+                .collect();
+            assert!(Match::is_match(&query, &choice));
+            let lower: Vec<char> = query.iter().map(|c| c.to_ascii_lowercase()).collect();
+            assert_eq!(
+                Score::new(&query, &choice).score.to_bits(),
+                buffer.score(&lower, &choice).to_bits(),
+                "query {:?}, candidate {:?}",
+                query,
+                content,
+            );
+        }
+
+        for (query, content) in [
+            ("", ""),
+            ("", "abc"),
+            ("AbC", "AbC"),
+            ("λé", "λé"),
+            ("amor", "app/models/order"),
+            ("a", "a/a"),
+        ] {
+            let query: Vec<char> = query.chars().collect();
+            let choice = Choice::new(content, &config());
+            let lower: Vec<char> = query.iter().map(|c| c.to_ascii_lowercase()).collect();
+            assert_eq!(
+                Score::new(&query, &choice).score.to_bits(),
+                buffer.score(&lower, &choice).to_bits()
+            );
+        }
+    }
 
     #[test]
     fn prefer_starts_of_words_test() {
